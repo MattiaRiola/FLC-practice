@@ -21,9 +21,9 @@ ip = ({subip}.){3}{subip}
 port = [1-9][0-9]{0,5}
 escape = %[A-F0-9][A-F0-9]
 path = ([a-zA-Z]|{escape})+
-anchor = {File}(#rif[1-9][0-9]*)?
+anchor = {File}(\#rif[1-9][0-9]*)?
 
-url ={scheme}"://"({ip}|{domain})(":"{port})?("/"{path})*("/"|"/"{anchor})?
+url ={scheme}\:\/\/({ip}|{domain})(\:{port})?(\/{path})*(\/|\/{anchor})?
 
 testurl ={scheme}://{domain}
 %%
