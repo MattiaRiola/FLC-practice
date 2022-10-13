@@ -1,0 +1,5 @@
+{
+    "BracketHighlighter.enableExtension": true,
+    "BracketHighlighter.highlightScopeFromText": true,
+    "BracketHighlighter.blurOutOfScopeText": true
+}
