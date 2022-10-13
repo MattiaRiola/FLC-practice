@@ -1,0 +1,10 @@
+line1
+line2
+line3
+/* line1c
+line2c*/
+line4
+/* **line*3c
+***/
+line5
+lin6 rere
