@@ -1,4 +1,7 @@
 - [Regex cheatsheet](#regex-cheatsheet)
+  - [Extra rules of jflex](#extra-rules-of-jflex)
+    - [Binary operator](#binary-operator)
+    - [Jflex States](#jflex-states)
   - [Characters](#characters)
   - [Quantifiers](#quantifiers)
   - [More characters](#more-characters)
@@ -9,6 +12,25 @@
   - [Anchors and Boundaries](#anchors-and-boundaries)
 
 # Regex cheatsheet
+
+
+## Extra rules of jflex
+
+### Binary operator 
+
+- The binary operator '/' separates a regular expression from
+its right context.
+  - Therefore, the expression `ab/cd`
+    - matches the string "ab", but if and only if is followed by the string "cd" 
+    - {sout(yytext();)} -> prints only "ab"
+
+### Jflex States
+
+- Rule starting with `<MyState>` are active only when the scanner is in the state "MyState"
+- Possible states must be declared in the declaration section using `%MyState`
+- The default state is YYINITIAL
+- The scanner enters a state when the following action is executed: `yybegin(state);`
+  - I can go back to the initial state using `yybegin(YYINITIAL);`
 
 ## Characters
 
