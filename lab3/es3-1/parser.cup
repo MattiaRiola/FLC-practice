@@ -1,0 +1,83 @@
+
+
+import java_cup.runtime.*;
+import java.io.*;
+
+///////////////////////////////////////////////////////
+// modification in order to discover line and column in errors
+
+parser code {:
+
+    // Redefinition of error functions
+    public void report_error(String message, Object info) {
+        System.err.print("ERROR: Syntax error");
+        if (info instanceof Symbol)
+            if (((Symbol)info).left != -1){
+                int line = (((Symbol)info).left)+1;
+                int column = (((Symbol)info).right)+1;
+                System.err.print(" (linea "+line+", colonna "+column+"): ");
+            } else System.err.print(": ");
+        else System.err.print(": ");
+    }
+    :};
+
+
+///////////////////////////////////
+// terminal tokens
+///////////////////////////////////
+terminal INT, DOUBLE, ID;
+terminal PRINT, IF, WHILE, ELSE;
+terminal RO, RC, BO, BC, SC, CM, SO, S;
+terminal PLUS, MINUS, STAR, DIV;
+terminal MIN, MAJ, MIN_EQ, EQ_MIN, MAJ_EQ, EQ_MAJ, EQ;
+terminal AND, OR, NOT;
+terminal INT_TYPE, DOUBLE_TYPE;
+terminal UMINUS;
+
+
+///////////////////////////////////
+// non terminal tokens
+///////////////////////////////////
+non terminal prog;
+non terminal decl_list, decl;
+non terminal type;
+non terminal var_list, var;
+
+
+// Precedences and associativities
+// lower precedences
+precedence left OR;
+precedence left AND;
+precedence left NOT;
+precedence left MIN, MAJ, MIN_EQ, EQ_MIN, MAJ_EQ, EQ_MAJ, EQ;
+precedence left PLUS, MINUS;
+precedence left STAR, DIV;
+precedence left UMINUS;
+// higher precedences
+
+//////////////////////////////////////
+// Grammar start
+//////////////////////////////////////
+
+start with prog;
+
+prog ::= decl_list {: System.out.println("Programm correctly recognized"); :}
+;
+
+//////////////////////////////////////
+// Declarations
+//////////////////////////////////////
+
+decl_list ::= decl_list |
+;
+
+decl ::= type var_list S
+;
+var_list ::= var | var_list CM var
+;
+
+var ::= ID
+;
+
+type ::= INT_TYPE | DOUBLE_TYPE
+;
