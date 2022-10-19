@@ -19,6 +19,8 @@ meanings:
 
 ### List that can be empty
 
+:warning: **the empty symbol 'ɛ' can be obtained using the rule in cup like this:** `EMPTYLIST ::= LE | ;` *(the last '| ' before the ';' is considered an empty symbol)*
+
 - Solution 1:
 *Empty list can be composed by symbol empty, or list of element*
 `EL ::= ɛ | LE ;`
