@@ -1,0 +1,67 @@
+/*************************
+ Parser
+**************************/
+
+import java_cup.runtime.*;
+import java.util.*;
+import java.io.*;
+
+
+parser code 	{:
+    
+    public void report_error(String message, Object info) {
+        StringBuffer m = new StringBuffer(message);
+        if (info instanceof Symbol) {
+            if (((Symbol)info).left != 1 && ((Symbol)info).right != 1) {
+                if (((Symbol)info).left != -1 && ((Symbol)info).right != -1) {
+                    int line = (((Symbol)info).left) + 1;
+                    int column = (((Symbol)info).right) + 1;
+                    m.append(" (line " + line + " column " + column + ")");
+                }
+            }
+            System.err.println(m);
+        }
+    }
+    
+    public Object stack(int position) {
+        return (((Symbol)stack.elementAt(tos + position)).value);
+    }
+:};
+
+
+
+//////////////////////////////////
+///// SYMBOLS DECLARATION
+/////////////////////////////////
+
+
+terminal STARTMP3, STARTSERVER, NUM, KBPS, C, S, CM, SONG;
+
+non terminal prog, prog_ok, mp3_list, mp3, song_list, serverL;
+
+
+
+//////////////////////////////////
+///// GRAMMAR
+/////////////////////////////////
+
+
+start with prog;
+
+prog ::= prog_ok {: System.out.print("Syntax Correct\n"); :}
+ | error {: parser.report_error("",null); :}
+;
+
+prog_ok ::= STARTMP3 C mp3_list
+//              SERVER DD dateL ipL
+;
+
+mp3_list ::= mp3 | mp3_list mp3 
+;
+
+mp3 ::= NUM KBPS C song_list S
+;
+
+song_list ::= SONG NUM | song_list CM SONG NUM 
+;
+
