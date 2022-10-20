@@ -44,3 +44,23 @@ meanings:
 - example 3: List of an odd # of elements that can be empty
 add this rule to example 2:
 `EL ::= ɛ | LE `
+
+## Inherited attributes
+
+If you need to acces an attribute in a Left grammar rule you can use this function:
+(you can just copy and paste it in the .cup file you are writing)
+```
+parser code {:
+public Object stack(int position){
+    // return the object at the specified position
+    // from the top of the stack (tos)
+    return (((Symbol)stack.elementAt(tos+position)).value);
+}
+:}
+
+```
+### example
+
+(I want the value from )
+
+W ::= Y Z {:RESULT = (String)parser.stack(-2);:}
