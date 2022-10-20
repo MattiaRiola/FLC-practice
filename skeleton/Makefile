@@ -1,5 +1,6 @@
-default: clean scanner parser
+default: clean scanner parser compile
 
+compile:
 	javac *.java
 
 scanner:
@@ -21,3 +22,9 @@ run:
 	java Main test.txt
 
 new: default run
+
+debug: clean scanner cupdebug compile run
+
+cupdebug:
+	java java_cup.Main -dump_grammar -parser parser parser.cup 
+
