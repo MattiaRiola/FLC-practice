@@ -1,0 +1,199 @@
+/*************************
+ Parser
+**************************/
+
+import java_cup.runtime.*;
+import java.util.*;
+import java.io.*;
+
+
+parser code 	{:
+    
+    public void report_error(String message, Object info) {
+        StringBuffer m = new StringBuffer(message);
+        if (info instanceof Symbol) {
+            if (((Symbol)info).left != 1 && ((Symbol)info).right != 1) {
+                if (((Symbol)info).left != -1 && ((Symbol)info).right != -1) {
+                    int line = (((Symbol)info).left) + 1;
+                    int column = (((Symbol)info).right) + 1;
+                    m.append(" (line " + line + " column " + column + ")");
+                }
+            }
+            System.err.println(m);
+        }
+    }
+    
+    public Object stack(int position) {
+        return (((Symbol)stack.elementAt(tos + position)).value);
+    }
+:};
+
+
+
+//////////////////////////////////
+///// SYMBOLS DECLARATION
+/////////////////////////////////
+
+terminal TOK1, TOK2, SEP, S, MINUS, C, RO, RC, MOD, PLUS, STAR, START, BATTERY, KWH;
+terminal USE, FUEL, DO, LITERS, KM, UNITSKM, MAX, DONE;
+terminal Double NUMBER;
+
+non terminal prog, header, tok1le, tok1l, run, printstart;
+non terminal Object[] startl, commandl, command, modass, useass, cons;
+non terminal Integer powertype; 
+non terminal Double batteryass, fuelass, exprl, expr, maxass;
+
+precedence left PLUS;
+precedence left STAR;
+
+//////////////////////////////////
+///// GRAMMAR
+/////////////////////////////////
+
+start with prog;
+
+prog ::= header SEP run
+;
+
+header ::= tok1le TOK2 S tok1le TOK2 S tok1le TOK2 S tok1le 
+        |   tok1le TOK2 S tok1le TOK2 S tok1le 
+        |   tok1le 
+;
+
+tok1le ::= | tok1l
+;
+
+tok1l ::= tok1l TOK1 S | TOK1 S
+;
+
+run ::= printstart commandl
+;
+
+printstart ::= startl:val {: 
+        System.out.println("battery="+val[0]+" fuel="+val[1]);
+        RESULT = val; 
+    :}
+;
+
+commandl ::= commandl command command | command command command command
+;
+
+startl ::= START batteryass:b MINUS fuelass:f S {:  
+                RESULT = new Object[2];
+                RESULT[0] = b;
+                RESULT[1] = f;
+            :}
+        |  START fuelass:f MINUS batteryass:b S  {:  
+                RESULT = new Object[2];
+                RESULT[0] = b;
+                RESULT[1] = f;
+            :}
+        |  START fuelass:f MINUS S  {:  
+                RESULT = new Object[2];
+                RESULT[0] = Double.valueOf(100);
+                RESULT[1] = f;
+            :}
+        |  START MINUS fuelass:f S  {:  
+                RESULT = new Object[2];
+                RESULT[0] = Double.valueOf(100);
+                RESULT[1] = f;
+            :}
+        |  START batteryass:b MINUS S  {:  
+                RESULT = new Object[2];
+                RESULT[0] = b;
+                RESULT[1] = Double.valueOf(100);
+            :}
+        |  START MINUS batteryass:b S  {:  
+                RESULT = new Object[2];
+                RESULT[0] = b;
+                RESULT[1] = Double.valueOf(100);
+            :}
+        |  START MINUS S  {:  
+                RESULT = new Object[2];
+                RESULT[0] = Double.valueOf(100);
+                RESULT[1] = Double.valueOf(100);
+            :}
+;
+
+batteryass ::= BATTERY expr:val KWH  {:  
+                RESULT = val;
+            :} 
+;
+
+fuelass ::= FUEL expr:val LITERS {:  
+                RESULT = val;
+            :} 
+;
+
+expr ::= expr:val1 PLUS expr:val2 {:  RESULT = val1 + val2; :}  
+     |   expr:val1 STAR expr:val2 {:  RESULT = val1 * val2; :}  
+     |   NUMBER:val {:  RESULT = val; :}  
+     |   maxass:val {:  RESULT = val; :}  
+;
+
+maxass ::= MAX RO exprl:val RC {:  RESULT = val; :}
+;
+
+exprl ::= exprl:max C expr:val {:  
+                RESULT = max;
+                if(val > max)
+                    RESULT = val;
+            :} 
+        | expr:val {:  RESULT = val; :}  
+;
+
+command ::= modass:values S {:  RESULT = values; :}  
+        | useass:values S {:  RESULT = values; :}  
+;
+
+modass ::=  MOD powertype:type expr:val {:
+            RESULT = new Object[2];
+            Object[] old = (Object[]) parser.stack(-3);
+            if(type == 0){
+                RESULT[0] = val + (Double) old[0];
+                RESULT[1] = (Double) old[1];
+            }
+            else{
+                RESULT[0] = (Double) old[0];
+                RESULT[1] = val + (Double) old[1];
+            }
+            System.out.println("battery="+RESULT[0]+" fuel="+RESULT[1]);
+        :}
+;
+
+useass ::= USE powertype DO cons:val DONE {:  RESULT = val; :} 
+;
+
+cons ::= cons:old expr:val1 KM expr:val2 UNITSKM S {:
+            RESULT = new Object[2];
+            int type = (int) parser.stack(-7);
+            if(type == 0){
+                RESULT[0] = (Double) old[0] - val1*val2;
+                RESULT[1] = (Double) old[1];
+            }
+            else{
+                RESULT[0] = (Double) old[0];
+                RESULT[1] = (Double) old[1] - val1*val2;
+            }
+            System.out.println("battery="+RESULT[0]+" fuel="+RESULT[1]);
+        :} 
+        | expr:val1 KM expr:val2 UNITSKM S  {:
+            RESULT = new Object[2];
+            Object[] old = (Object[]) parser.stack(-8);
+            int type = (int) parser.stack(-6);
+            if(type == 0){
+                RESULT[0] = (Double) old[0] - val1*val2;
+                RESULT[1] = (Double) old[1];
+            }
+            else{
+                RESULT[0] = (Double) old[0];
+                RESULT[1] = (Double) old[1] - val1*val2;
+            }
+            System.out.println("battery="+RESULT[0]+" fuel="+RESULT[1]);
+            
+        :} 
+;
+
+powertype ::= FUEL  {:  RESULT = 1; :} 
+            | BATTERY {:  RESULT = 0; :} 
+;
