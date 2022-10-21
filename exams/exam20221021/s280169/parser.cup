@@ -48,7 +48,12 @@ non terminal tk_empty_list, tk_list;
 non terminal command_empty_list, command_list, command,assignment;
 non terminal Boolean boolean_exp;
 
-
+// Precedences and associativities
+//low priority
+precedence left OR;
+precedence left AND;
+precedence left NOT;
+//high priority
 
 //////////////////////////////////
 ///// GRAMMAR
@@ -60,8 +65,6 @@ start with prog;
 prog ::= header SEP command_empty_list
 ;
 
-//command ::= {:System.out.println("TODO command grammar");:}
-//;
 
 header ::= tk_empty_list
 ;
@@ -93,6 +96,7 @@ assignment ::= ID:x EQ boolean_exp:y
         parser.symbol_table.put(x, y);
     :}
 ;
+
 boolean_exp ::= boolean_exp:x OR boolean_exp:y
     {:
             RESULT=x||y;
@@ -106,5 +110,5 @@ boolean_exp ::= boolean_exp:x OR boolean_exp:y
         RESULT=!x;
     :}
     | TRUE{:RESULT= new Boolean(true);:} | FALSE{:RESULT= new Boolean(false);:}
+    | ID:x {: RESULT=(Boolean) parser.symbol_table.get(x); :}
 ;
-
