@@ -88,11 +88,15 @@ command_empty_list ::= |command_list
 command_list::= command command command command |command_list command command
 ;
 
-command ::= assignment 
+command ::= assignment S
 ;
 assignment ::= ID:x EQ boolean_exp:y
     {:
-        System.out.println(x+y);
+        if(y)
+            System.out.println(x+" T");
+        else
+            System.out.println(x+" F");
+
         parser.symbol_table.put(x, y);
     :}
 ;

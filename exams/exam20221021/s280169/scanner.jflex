@@ -12,12 +12,12 @@ import java_cup.runtime.*;
 %column
 %{
 	private Symbol sym(int type) {
-		System.out.println("FOUND: " + yytext());
+//		System.out.println("FOUND: " + yytext());
 		return new Symbol(type, yyline, yycolumn);
 	}
 	
 	private Symbol sym(int type, Object value) {
-		System.out.println("FOUND: " + yytext());
+//		System.out.println("FOUND: " + yytext());
 		return new Symbol(type, yyline, yycolumn, value);
 	}
 	

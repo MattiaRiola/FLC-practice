@@ -20,3 +20,11 @@ Added a line in the boolean expression that identifies when a variable is used i
 boolean_exp ::= [...]
     | ID:x {: RESULT=(Boolean) parser.symbol_table.get(x); :}
 ```
+
+## Comment debug prints
+
+In the assignment rule, in order to debug the code I added a `System.out.println("FOUND: "+ yytext())`, so I commented that and fixed the `System.out.println(x+y);` to allign the output with the one that was reqested (instead of `x1true` -> `x1 T`)
+
+## missing Semicolon in assignment
+
+Added the expected semicolon in the assignment rule
