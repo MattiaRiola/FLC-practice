@@ -1,4 +1,5 @@
 - [Regex cheatsheet](#regex-cheatsheet)
+  - [Common rules](#common-rules)
   - [Extra rules of jflex](#extra-rules-of-jflex)
     - [Binary operator](#binary-operator)
     - [Jflex States](#jflex-states)
@@ -13,6 +14,47 @@
 
 # Regex cheatsheet
 
+## Common rules
+
+Comment: 
+`"/*" ~ "*/"      {;}`
+`"//".*          {;}`
+
+String:
+`string = \" ~ \"`
+
+Integer and Double:
+```
+integer = ([1-9][0-9]*|0)
+double = (([0-9]+\.[0-9]*) | ([0-9]*\.[0-9]+)) (e|E('+'|'-')?[0-9]+)?
+```
+
+FileName:
+`FileName = [0-9a-zA-Z]+`
+
+Time and date:
+```
+day 		= 	[0-2][0-9] | 3[0-1]
+month 		= 	0[0-9] | 1[0-2]
+year		= 	[1-9][0-9]+
+date 		= 	{day}"/"{month}"/"{year}
+hours		=   [0-1][0-9] | 2[0-3]
+minutes		= 	[0-5][0-9]
+time 		= 	{hours}":"{minutes}
+```
+
+ip:
+```
+ip_num		=	(2(([0-4][0-9])|(5[0-5])))|(1[0-9][0-9])|([1-9][0-9])|([0-9])
+ip			=	{ip_num}"."{ip_num}"."{ip_num}"."{ip_num}
+```
+
+url:
+```
+scheme = [a-zA-Z]+
+subdomain = [a-zA-Z0-9]+
+domain = {subdomain}.{subdomain}(.{subdomain})*
+```
 
 ## Extra rules of jflex
 
