@@ -7,8 +7,15 @@ import java.util.*;
 import java.io.*;
 
 
+init with {:
+    symbol_table = new Hashtable<String,Integer>();
+:};
+
 parser code 	{:
-    
+    Integer totale=0;
+    public Hashtable<String,Integer> symbol_table;
+
+
     public void report_error(String message, Object info) {
         StringBuffer m = new StringBuffer(message);
         if (info instanceof Symbol) {
@@ -35,9 +42,15 @@ parser code 	{:
 /////////////////////////////////
 
 
-terminal STARTMP3, STARTSERVER, NUM, KBPS, C, S, CM, SONG;
-
-non terminal prog, prog_ok, mp3_list, mp3, song_list, serverL;
+terminal STARTMP3, SERVER, KBPS, C, S, CM;
+terminal TIME, DATE, DATEW, TIMEW;
+terminal String IP;
+terminal String SONG;
+terminal Integer NUM;
+non terminal prog, prog_ok, mp3_list, mp3, song_list;
+non terminal date_time, time, date;
+non terminal ip_list;
+non terminal Integer song_name_list;
 
 
 
@@ -52,16 +65,52 @@ prog ::= prog_ok {: System.out.print("Syntax Correct\n"); :}
  | error {: parser.report_error("",null); :}
 ;
 
-prog_ok ::= STARTMP3 C mp3_list
-//              SERVER DD dateL ipL
+prog_ok ::= STARTMP3 C mp3_list SERVER C date_time ip_list
 ;
 
+//PART 1
 mp3_list ::= mp3 | mp3_list mp3 
 ;
 
 mp3 ::= NUM KBPS C song_list S
 ;
 
-song_list ::= SONG NUM | song_list CM SONG NUM 
+song_list ::= 
+    SONG:x NUM:y 
+        {: 
+            Integer rate = (Integer) parser.stack(-4);
+            symbol_table.put(x,y*rate);
+        :}
+    | song_list CM SONG:x NUM:y 
+        {:
+            Integer rate = (Integer) parser.stack(-6);
+            symbol_table.put(x,y*rate);
+        :}
 ;
 
+
+//PART 2
+//optional_date_time ::= date_time | ;
+ip_list ::= IP:x {:System.out.println(x+":");:}C song_name_list:total S {:System.out.println("TOTALE:"+total);:} 
+            | ip_list IP:x {:System.out.println(x+":");:} C song_name_list:total S {:System.out.println("TOTALE:"+total);:}
+;
+song_name_list ::= 
+    SONG:x
+        {:
+            Integer songSize = (Integer) symbol_table.get(x);
+            System.out.println(x + " " + songSize);
+            RESULT = songSize;
+        :}
+    | song_name_list:y CM SONG:x
+        {:
+            Integer songSize = (Integer) symbol_table.get(x);
+            System.out.println(x + " " + songSize);
+            RESULT = y + songSize;
+        :}
+;
+date_time ::= time date | date time
+;
+date ::= DATEW C DATE
+;
+time ::= TIMEW C TIME
+;
