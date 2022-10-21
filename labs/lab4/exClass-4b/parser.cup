@@ -1,0 +1,65 @@
+import java_cup.runtime.*;
+import java.util.HashMap;
+
+init with {:
+    symbolTable = new HashMap<String, Float>();
+:};
+
+
+parser code {:
+    public HashMap <String, Float>symbolTable;
+
+    public void report_error(String message, Object info) {
+        System.err.print("ERROR: Syntax error");
+        if (info instanceof Symbol)
+            if (((Symbol)info).left != -1){
+                int line = (((Symbol)info).left)+1;
+                int column = (((Symbol)info).right)+1;
+                System.err.print(" (line "+line+", column "+column+"): ");
+            } else System.err.print(": ");
+        else System.err.print(": ");
+    }
+
+:};
+
+
+
+// Terminals / non Terminals section
+
+terminal String ID;
+terminal Float EURO;
+terminal Integer INT;
+terminal CM, S, C, SEP;
+
+non terminal prog, products, product, receipts, receipt;
+
+non terminal Float purchasedProducts, purchasedProduct;
+
+
+start with prog;
+
+// RULES SECTION
+prog ::= products SEP receipts;
+
+// First section
+products ::= products product | product;
+
+product ::= ID:x EURO:price S {: parser.symbolTable.put(x, price); :}
+;
+
+// Second section
+receipts ::= receipts receipt | ;  /* Empty list */
+
+receipt ::= ID:name C purchasedProducts:totalPrice S
+{:
+  System.out.println(name+": "+totalPrice+" EURO");
+:};
+
+purchasedProducts ::= purchasedProducts:x CM purchasedProduct:y {: RESULT = x+y; :}
+    | purchasedProduct:x {: RESULT = x; :}
+;
+
+purchasedProduct ::= INT:quantity ID:prod {: RESULT = quantity * parser.symbolTable.get(prod); :}
+;
+
+

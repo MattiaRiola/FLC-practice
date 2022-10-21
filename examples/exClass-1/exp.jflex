@@ -16,7 +16,7 @@ intNumber	=  [1-9][0-9]*
 "-"		{System.out.println("MINUS");}
 "*"		{System.out.println("STAR");}
 "/"		{System.out.println("DIV");}
-"^"     {System.out.println("ELEVATE");}
+
 
 "("		{System.out.println("OPEN_BRACKET");}
 ")"		{System.out.println("CLOSE_BRACKET");}
@@ -25,5 +25,5 @@ intNumber	=  [1-9][0-9]*
 
 {nl}|" "|\t 	{;}
 
-.		{System.err.println("Error: " + yytext());}
+.		{System.out.println("Error: " + yytext());}
 

@@ -1,0 +1,48 @@
+// Non correct parser because of a shift/reduce conflict 
+// managed uncorrectly by the parser
+
+import java_cup.runtime.*;
+
+// Terminals / non Terminals section
+
+terminal TYPE, ID, S, C, RO, RC, BO, BC;
+
+non terminal prototype, prototypes_list, variables_list, variables, variable, declaration, function, prog, prototypes, functions_list, functions;
+
+
+start with prog;
+
+// Rules section
+
+prog ::= prototypes_list functions_list
+;
+
+// PROTOTYPES
+prototypes_list ::= prototypes | ;
+
+prototypes ::= prototype
+		| prototypes prototype
+;
+
+prototype ::= TYPE ID RO variables_list RC S
+              {:System.out.println("Prototype");:};
+
+// FUNCTIONS
+functions_list ::= functions | ;
+
+functions ::= function
+	    	| functions function;
+function ::= TYPE ID RO variables_list RC BO BC {:System.out.println("Function");:};
+
+// VARIABLES: e.g., int a, float b
+variables_list ::= variables | ;
+
+variables ::= variable
+		| variables C variable;
+
+variable ::= TYPE ID;
+
+
+
+
+

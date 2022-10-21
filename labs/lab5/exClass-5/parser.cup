@@ -1,0 +1,31 @@
+import java_cup.runtime.*;
+
+parser code {:
+    // Return semantic value of symbol in position (position)
+    public Object stack(int position) {
+        return (((Symbol)stack.elementAt(tos+position)).value);
+    }
+:};
+
+terminal S, CM;
+terminal String TYPE, ID;
+non terminal goal, list_decl;
+non terminal String decl, lid;
+
+start with goal;
+
+goal ::= list_decl {: System.out.println("PARSER: Recognized grammar!!"); :};
+
+list_decl ::= | list_decl decl;
+
+decl ::= TYPE lid:x S {: System.out.println("PARSER: Found declaration of type: " + x); :};
+
+lid ::= ID:name CM {: RESULT = (String) parser.stack(-2); :} lid {:
+    RESULT = (String) parser.stack(-1);
+    System.out.println("PARSER: var(" + name + ", " + RESULT + ")");
+:} ;
+
+lid ::= ID:name {:
+    RESULT = (String) parser.stack(-1);
+    System.out.println("PARSER: var(" + name + ", " + RESULT + ")");
+:} ;

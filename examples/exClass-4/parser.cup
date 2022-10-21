@@ -1,0 +1,47 @@
+import java_cup.runtime.*;
+
+// Terminals / non Terminals section
+
+terminal TYPE, ID, S, C, RO, RC, BO, BC;
+
+non terminal  prototype, variables_list, variables, variable, declaration, function, prog, prototypes, functions_list, functions;
+
+
+start with prog;
+
+// Rules section
+
+prog ::= prototypes functions_list
+    		| functions_list
+;
+
+// PROTOTYPES
+prototypes ::= prototype
+		| prototypes prototype
+;
+
+prototype ::= TYPE ID RO variables_list RC S
+              {:System.out.println("PARSER: Prototype");:}
+;
+
+// FUNCTIONS
+functions_list ::= functions | ;
+
+functions ::= function
+	    	| functions function
+;
+
+function ::= TYPE ID RO variables_list RC BO BC 
+		{:System.out.println("PARSER: Function");:}
+;
+
+// VARIABLES: e.g., int a, float b
+variables_list ::= variables | ;
+
+variables ::= variable
+		| variables C variable
+;
+
+variable ::= TYPE ID;
+
+
