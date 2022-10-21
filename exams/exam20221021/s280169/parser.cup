@@ -1,0 +1,110 @@
+/*************************
+ Parser
+**************************/
+
+import java_cup.runtime.*;
+import java.util.*;
+import java.io.*;
+
+init with {:
+    symbol_table = new Hashtable<String,Boolean>();
+:};
+parser code 	{:
+    public Hashtable<String,Boolean> symbol_table;
+
+    public void report_error(String message, Object info) {
+        StringBuffer m = new StringBuffer(message);
+        if (info instanceof Symbol) {
+            if (((Symbol)info).left != 1 && ((Symbol)info).right != 1) {
+                if (((Symbol)info).left != -1 && ((Symbol)info).right != -1) {
+                    int line = (((Symbol)info).left) + 1;
+                    int column = (((Symbol)info).right) + 1;
+                    m.append(" (line " + line + " column " + column + ")");
+                }
+            }
+            System.err.println(m);
+        }
+    }
+    
+    public Object stack(int position) {
+        return (((Symbol)stack.elementAt(tos + position)).value);
+    }
+:};
+
+
+
+//////////////////////////////////
+///// SYMBOLS DECLARATION
+/////////////////////////////////
+
+terminal SEP, S, EQ;
+terminal TK1,TK2,TK3;
+terminal AND, NOT, OR;
+terminal String ID;
+terminal Boolean TRUE,FALSE;
+
+non terminal prog, prog_ok, header;
+non terminal tk_empty_list, tk_list;
+non terminal command_empty_list, command_list, command,assignment;
+non terminal Boolean boolean_exp;
+
+
+
+//////////////////////////////////
+///// GRAMMAR
+/////////////////////////////////
+
+start with prog;
+
+
+prog ::= header SEP command_empty_list
+;
+
+//command ::= {:System.out.println("TODO command grammar");:}
+//;
+
+header ::= tk_empty_list
+;
+
+tk_empty_list ::= | tk_list
+;
+
+tk_list ::= 
+    tk_list TK3 S
+    | tk_list TK2 S
+    | tk_list TK1 S
+    | TK1 S
+    | TK2 S
+    //TODO: TK2 rules
+    | TK3 S
+;
+
+command_empty_list ::= |command_list
+;
+
+command_list::= command command command command |command_list command command
+;
+
+command ::= assignment 
+;
+assignment ::= ID:x EQ boolean_exp:y
+    {:
+        System.out.println(x+y);
+        parser.symbol_table.put(x, y);
+    :}
+;
+boolean_exp ::= boolean_exp:x OR boolean_exp:y
+    {:
+            RESULT=x||y;
+    :}
+    | boolean_exp:x AND boolean_exp:y
+    {:
+            RESULT=x&&y;
+    :}
+    | NOT boolean_exp:x
+    {:
+        RESULT=!x;
+    :}
+    | TRUE{:RESULT= new Boolean(true);:} | FALSE{:RESULT= new Boolean(false);:}
+;
+

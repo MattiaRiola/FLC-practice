@@ -1,0 +1,6 @@
+tk3 ;                                           {++ tk3 ++}
+name1.surname1@skenz.it/name2.surname2@abc.net; {++ tk2 ++}
+?ABCFEF-36xxyyxxyy ;                            {++ tk1 ++}
+tk3;                                            {++ tk3 ++}
+
+$$$ 
