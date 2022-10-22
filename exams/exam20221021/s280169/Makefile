@@ -7,7 +7,7 @@ scanner:
 	jflex scanner.jflex
 	
 parser:
-	java java_cup.Main -expect 1 -parser parser parser.cup
+	java java_cup.Main -expect 11 -parser parser parser.cup
 	
 drawparser:
 	java java_cup.MainDrawTree parser.cup

@@ -44,7 +44,7 @@ terminal String ID;
 terminal Boolean TRUE, FALSE;
 
 non terminal prog, prog_ok, header;
-non terminal tk_empty_list, tk_list;
+non terminal tk_empty_list, tk13_list;
 non terminal command_empty_list, command_list, command,assignment;
 non terminal Boolean boolean_exp, argument_list;
 
@@ -69,15 +69,14 @@ prog ::= header SEP command_empty_list
 header ::= tk_empty_list
 ;
 
-tk_empty_list ::= | tk_list
+tk_empty_list ::= | tk13_list 
+    | tk13_list TK2 S tk13_list
+    | tk13_list TK2 S tk13_list TK2 S tk13_list TK2 S tk13_list TK2 S tk13_list
 ;
 
-tk_list ::= tk_list TK3 S
-    | tk_list TK2 S
-    | tk_list TK1 S
+tk13_list ::= | tk13_list TK3 S
+    | tk13_list TK1 S
     | TK1 S
-    | TK2 S
-    //TODO: TK2 rules
     | TK3 S
 ;
 

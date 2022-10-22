@@ -32,3 +32,14 @@ Added the expected semicolon in the assignment rule
 ## implementation of fz_and(...) command
 
 Implemented the missing rules associated to the fz_and(...) command
+
+## TK2 rule
+
+Modified the tk_list rule in order to add the rule that allows TK2 appear 0, 1 or 4 times
+
+# TODO:
+
+## CMP grammar
+
+## Print of where conditions
+
