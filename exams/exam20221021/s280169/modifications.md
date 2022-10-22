@@ -28,3 +28,7 @@ In the assignment rule, in order to debug the code I added a `System.out.println
 ## missing Semicolon in assignment
 
 Added the expected semicolon in the assignment rule
+
+## implementation of fz_and(...) command
+
+Implemented the missing rules associated to the fz_and(...) command

@@ -39,6 +39,10 @@ id = [a-zA-Z][a-zA-Z0-9_]*
 "$$$" 				{return sym(sym.SEP);}
 ";" 				{return sym(sym.S);}
 "=" 				{return sym(sym.EQ);}
+"(" 				{return sym(sym.RO);}
+")" 				{return sym(sym.RC);}
+"," 				{return sym(sym.C);}
+"fz_and"			{return sym(sym.FZAND);}
 "OR" 				{return sym(sym.OR);}
 "NOT" 				{return sym(sym.NOT);}
 "AND" 				{return sym(sym.AND);}

@@ -37,16 +37,16 @@ parser code 	{:
 ///// SYMBOLS DECLARATION
 /////////////////////////////////
 
-terminal SEP, S, EQ;
-terminal TK1,TK2,TK3;
-terminal AND, NOT, OR;
+terminal SEP, S, EQ, RO, RC, C;
+terminal TK1, TK2, TK3;
+terminal AND, NOT, OR, FZAND;
 terminal String ID;
-terminal Boolean TRUE,FALSE;
+terminal Boolean TRUE, FALSE;
 
 non terminal prog, prog_ok, header;
 non terminal tk_empty_list, tk_list;
 non terminal command_empty_list, command_list, command,assignment;
-non terminal Boolean boolean_exp;
+non terminal Boolean boolean_exp, argument_list;
 
 // Precedences and associativities
 //low priority
@@ -72,8 +72,7 @@ header ::= tk_empty_list
 tk_empty_list ::= | tk_list
 ;
 
-tk_list ::= 
-    tk_list TK3 S
+tk_list ::= tk_list TK3 S
     | tk_list TK2 S
     | tk_list TK1 S
     | TK1 S
@@ -82,7 +81,7 @@ tk_list ::=
     | TK3 S
 ;
 
-command_empty_list ::= |command_list
+command_empty_list ::= | command_list
 ;
 
 command_list::= command command command command |command_list command command
@@ -101,18 +100,17 @@ assignment ::= ID:x EQ boolean_exp:y
     :}
 ;
 
-boolean_exp ::= boolean_exp:x OR boolean_exp:y
-    {:
-            RESULT=x||y;
-    :}
-    | boolean_exp:x AND boolean_exp:y
-    {:
-            RESULT=x&&y;
-    :}
-    | NOT boolean_exp:x
-    {:
-        RESULT=!x;
-    :}
-    | TRUE{:RESULT= new Boolean(true);:} | FALSE{:RESULT= new Boolean(false);:}
-    | ID:x {: RESULT=(Boolean) parser.symbol_table.get(x); :}
+
+argument_list ::= argument_list:x C boolean_exp:y       {: RESULT=x&&y; :}
+                | boolean_exp:x                         {: RESULT=x; :}
 ;
+
+boolean_exp ::= boolean_exp:x OR boolean_exp:y  {: RESULT=x||y; :}
+    | boolean_exp:x AND boolean_exp:y           {: RESULT=x&&y; :}
+    | NOT boolean_exp:x                         {: RESULT=!x; :}
+    | FZAND RO argument_list:x RC               {: RESULT=x; :}
+    | TRUE                                      {: RESULT= new Boolean(true); :} 
+    | FALSE                                     {: RESULT= new Boolean(false); :}
+    | ID:x                                      {: RESULT=(Boolean) parser.symbol_table.get(x); :}
+;
+
