@@ -34,6 +34,8 @@ tk2 = {email}("!"|"/"){email}
 	| ({email}("!"|"/")){11}{email}
 	| ({email}("!"|"/")){14}{email}
 id = [a-zA-Z][a-zA-Z0-9_]*
+string = \" ~ \"
+
 %%
 
 "$$$" 				{return sym(sym.SEP);}
@@ -41,18 +43,25 @@ id = [a-zA-Z][a-zA-Z0-9_]*
 "=" 				{return sym(sym.EQ);}
 "(" 				{return sym(sym.RO);}
 ")" 				{return sym(sym.RC);}
+"[" 				{return sym(sym.SO);}
+"]" 				{return sym(sym.SC);}
+
 "," 				{return sym(sym.C);}
 "fz_and"			{return sym(sym.FZAND);}
 "OR" 				{return sym(sym.OR);}
 "NOT" 				{return sym(sym.NOT);}
 "AND" 				{return sym(sym.AND);}
+"CMP"				{return sym(sym.CMP);}
+"WITH"				{return sym(sym.WITH);}
 "T" 				{return sym(sym.TRUE,new Boolean(true));}
 "F" 				{return sym(sym.FALSE,new Boolean(false));}
-
 "tk3" 				{return sym(sym.TK3);}
 {tk2} 				{return sym(sym.TK2);}
 {tk1} 				{return sym(sym.TK1);}
+"print" 			{return sym(sym.PRINT);}
 {id}				{return sym(sym.ID,new String(yytext()));}
+{string}			{return sym(sym.STRING,new String(yytext()));}
+
 {comment} 			{;}
 
 \r | \n | \r\n | " " | \t	{;}

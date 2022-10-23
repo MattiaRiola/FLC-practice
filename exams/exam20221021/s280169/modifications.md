@@ -37,9 +37,6 @@ Implemented the missing rules associated to the fz_and(...) command
 
 Modified the tk_list rule in order to add the rule that allows TK2 appear 0, 1 or 4 times
 
-# TODO:
+## CMP command
 
-## CMP grammar
-
-## Print of where conditions
-
+Grammar and lexicon of CMP command with the associated prints

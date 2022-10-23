@@ -37,15 +37,16 @@ parser code 	{:
 ///// SYMBOLS DECLARATION
 /////////////////////////////////
 
-terminal SEP, S, EQ, RO, RC, C;
+terminal SEP, S, EQ, RO, RC, C, SO, SC, PRINT;
 terminal TK1, TK2, TK3;
-terminal AND, NOT, OR, FZAND;
-terminal String ID;
+terminal AND, NOT, OR, FZAND, CMP, WITH;
+terminal String ID, STRING;
 terminal Boolean TRUE, FALSE;
 
 non terminal prog, prog_ok, header;
 non terminal tk_empty_list, tk13_list;
-non terminal command_empty_list, command_list, command,assignment;
+non terminal command_empty_list, command_list, command ,assignment;
+non terminal action_list, cmp, print_cmd;
 non terminal Boolean boolean_exp, argument_list;
 
 // Precedences and associativities
@@ -80,13 +81,13 @@ tk13_list ::= | tk13_list TK3 S
     | TK3 S
 ;
 
-command_empty_list ::= | command_list
+command_empty_list ::= | command_list 
 ;
 
 command_list::= command command command command |command_list command command
 ;
 
-command ::= assignment S
+command ::= cmp | assignment S 
 ;
 assignment ::= ID:x EQ boolean_exp:y
     {:
@@ -112,4 +113,18 @@ boolean_exp ::= boolean_exp:x OR boolean_exp:y  {: RESULT=x||y; :}
     | FALSE                                     {: RESULT= new Boolean(false); :}
     | ID:x                                      {: RESULT=(Boolean) parser.symbol_table.get(x); :}
 ;
+
+cmp ::= CMP boolean_exp action_list 
+;
+
+action_list ::=   
+        action_list WITH boolean_exp:x SO PRINT RO STRING:s RC S SC {:
+            boolean cmpCond = (Boolean) parser.stack(-10);
+            if(x == cmpCond) System.out.println(s);
+            :} 
+            | WITH boolean_exp:x SO PRINT RO STRING:s RC S SC {:
+            boolean cmpCond = (Boolean) parser.stack(-9);
+            if(x == cmpCond) System.out.println(s);
+            :} 
+; 
 

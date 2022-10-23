@@ -10,7 +10,7 @@ parser:
 	java java_cup.Main -expect 11 -parser parser parser.cup
 	
 drawparser:
-	java java_cup.MainDrawTree parser.cup
+	java java_cup.MainDrawTree -expect 11 parser.cup
 
 clean:
 
@@ -32,8 +32,8 @@ runtree:
 
 new: default run
 
-debug: clean scanner cupdebug compile rundebug
+debug: clean scanner cupdebug compile
 
 cupdebug:
-	java java_cup.Main -dump_grammar -parser parser parser.cup 
+	java java_cup.Main -expect 11 -dump_grammar -parser parser parser.cup 
 
