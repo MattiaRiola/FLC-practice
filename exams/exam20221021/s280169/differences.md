@@ -1,3 +1,12 @@
+- [Modifications](#modifications)
+  - [Precedences and conflicts](#precedences-and-conflicts)
+  - [Value in boolean expression](#value-in-boolean-expression)
+  - [Comment debug prints](#comment-debug-prints)
+  - [missing Semicolon in assignment](#missing-semicolon-in-assignment)
+  - [implementation of fz_and(...) command](#implementation-of-fz_and-command)
+  - [TK2 rule](#tk2-rule)
+  - [CMP command](#cmp-command)
+
 # Modifications
 
 ## Precedences and conflicts
