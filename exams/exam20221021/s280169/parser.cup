@@ -1,0 +1,128 @@
+/*************************
+ Parser
+**************************/
+
+import java_cup.runtime.*;
+import java.util.*;
+import java.io.*;
+
+init with {:
+    symbol_table = new Hashtable<String,Boolean>();
+:};
+parser code 	{:
+    public Hashtable<String,Boolean> symbol_table;
+
+    public void report_error(String message, Object info) {
+        StringBuffer m = new StringBuffer(message);
+        if (info instanceof Symbol) {
+            if (((Symbol)info).left != 1 && ((Symbol)info).right != 1) {
+                if (((Symbol)info).left != -1 && ((Symbol)info).right != -1) {
+                    int line = (((Symbol)info).left) + 1;
+                    int column = (((Symbol)info).right) + 1;
+                    m.append(" (line " + line + " column " + column + ")");
+                }
+            }
+            System.err.println(m);
+        }
+    }
+    
+    public Object stack(int position) {
+        return (((Symbol)stack.elementAt(tos + position)).value);
+    }
+:};
+
+
+
+//////////////////////////////////
+///// SYMBOLS DECLARATION
+/////////////////////////////////
+
+terminal SEP, S, EQ, RO, RC, C, SO, SC, PRINT;
+terminal TK1, TK2, TK3;
+terminal AND, NOT, OR, FZAND, CMP, WITH;
+terminal String ID, STRING;
+terminal Boolean TRUE, FALSE;
+
+non terminal prog, prog_ok, header;
+non terminal tk_empty_list, tk13_list;
+non terminal command_empty_list, command_list, command ,assignment;
+non terminal action_list, cmp, print_cmd;
+non terminal Boolean boolean_exp, argument_list;
+
+// Precedences and associativities
+//low priority
+precedence left OR;
+precedence left AND;
+precedence left NOT;
+//high priority
+
+//////////////////////////////////
+///// GRAMMAR
+/////////////////////////////////
+
+start with prog;
+
+
+prog ::= header SEP command_empty_list
+;
+
+
+header ::= tk_empty_list
+;
+
+tk_empty_list ::= | tk13_list 
+    | tk13_list TK2 S tk13_list
+    | tk13_list TK2 S tk13_list TK2 S tk13_list TK2 S tk13_list TK2 S tk13_list
+;
+
+tk13_list ::= | tk13_list TK3 S
+    | tk13_list TK1 S
+;
+
+command_empty_list ::= | command_list 
+;
+
+command_list::= command command command command |command_list command command
+;
+
+command ::= cmp | assignment S 
+;
+assignment ::= ID:x EQ boolean_exp:y
+    {:
+        if(y)
+            System.out.println(x+" T");
+        else
+            System.out.println(x+" F");
+
+        parser.symbol_table.put(x, y);
+    :}
+;
+
+
+argument_list ::= argument_list:x C boolean_exp:y       {: RESULT=x&&y; :}
+                | boolean_exp:x                         {: RESULT=x; :}
+;
+
+boolean_exp ::= boolean_exp:x OR boolean_exp:y  {: RESULT=x||y; :}
+    | boolean_exp:x AND boolean_exp:y           {: RESULT=x&&y; :}
+    | NOT boolean_exp:x                         {: RESULT=!x; :}
+    | FZAND RO argument_list:x RC               {: RESULT=x; :}
+    | TRUE                                      {: RESULT= new Boolean(true); :} 
+    | FALSE                                     {: RESULT= new Boolean(false); :}
+    | ID:x                                      {: RESULT=(Boolean) parser.symbol_table.get(x); :}
+;
+
+cmp ::= CMP boolean_exp action_list 
+;
+
+action_list ::=   
+        action_list WITH boolean_exp:x SO PRINT RO STRING:s RC S SC {:
+            boolean cmpCond = (Boolean) parser.stack(-10);
+            if(x == cmpCond) System.out.println(s);
+            :} 
+            | WITH boolean_exp:x SO PRINT RO STRING:s RC S SC {:
+            boolean cmpCond = (Boolean) parser.stack(-9);
+            if(x == cmpCond) System.out.println(s);
+            :} 
+; 
+
