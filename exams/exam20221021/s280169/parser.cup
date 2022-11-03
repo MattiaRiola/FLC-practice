@@ -77,8 +77,6 @@ tk_empty_list ::= | tk13_list
 
 tk13_list ::= | tk13_list TK3 S
     | tk13_list TK1 S
-    | TK1 S
-    | TK3 S
 ;
 
 command_empty_list ::= | command_list 
