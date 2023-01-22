@@ -30,6 +30,11 @@ signedInteger = ([+-]?[1-9][0-9]*|0)
 double = (([0-9]+\.[0-9]*) | ([0-9]*\.[0-9]+)) (e|E('+'|'-')?[0-9]+)?
 ```
 
+Identifiers for variables in programming languages:
+```java
+varId = [_a-zA-Z][_a-zA-Z0-9]*
+```
+
 FileName:
 `FileName = [0-9a-zA-Z]+`
 
