@@ -24,8 +24,9 @@ String:
 `string = \" ~ \"`
 
 Integer and Double:
-```
+```java
 integer = ([1-9][0-9]*|0)
+signedInteger = ([+-]?[1-9][0-9]*|0)
 double = (([0-9]+\.[0-9]*) | ([0-9]*\.[0-9]+)) (e|E('+'|'-')?[0-9]+)?
 ```
 
