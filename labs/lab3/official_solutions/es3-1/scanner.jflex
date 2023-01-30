@@ -2,21 +2,21 @@ import java_cup.runtime.*;
 
 %%
 
-%class scanner
 %unicode
 %cup
 %line
 %column
-
-
 %{
-  private Symbol symbol(int type) {
-    return new Symbol(type, yyline, yycolumn);
-  }
-  private Symbol symbol(int type, Object value) {
-    return new Symbol(type, yyline, yycolumn, value);
+	private Symbol sym(int type) {
+//		System.out.println("FOUND: " + yytext());
+		return new Symbol(type, yyline, yycolumn);
+	}
 	
-  }
+	private Symbol sym(int type, Object value) {
+//		System.out.println("FOUND: " + yytext());
+		return new Symbol(type, yyline, yycolumn, value);
+	}
+	
 %}
 
 nl = \r|\n|\r\n
@@ -27,41 +27,41 @@ double = (([0-9]+\.[0-9]*) | ([0-9]*\.[0-9]+)) (e|E('+'|'-')?[0-9]+)?
 
 %%
 
-"("     {return symbol(sym.RO);}
-")"     {return symbol(sym.RC);}
-"{"     {return symbol(sym.BO);}
-"}"     {return symbol(sym.BC);}
-"="     {return symbol(sym.EQ);}
-"+"     {return symbol(sym.PLUS);}
-"-"     {return symbol(sym.MINUS);}
-"*"     {return symbol(sym.STAR);}
-"/"     {return symbol(sym.DIV);}
-"<"     {return symbol(sym.MIN);}
-">"     {return symbol(sym.MAJ);}
-"<="    {return symbol(sym.MIN_EQ);}
-"=<"    {return symbol(sym.EQ_MIN);}
-">="    {return symbol(sym.MAJ_EQ);}
-"=>"    {return symbol(sym.EQ_MAJ);}
-"&"     {return symbol(sym.AND);}
-"|"     {return symbol(sym.OR);}
-"!"     {return symbol(sym.NOT);}
+"("     {return sym(sym.RO);}
+")"     {return sym(sym.RC);}
+"{"     {return sym(sym.BO);}
+"}"     {return sym(sym.BC);}
+"="     {return sym(sym.EQ);}
+"+"     {return sym(sym.PLUS);}
+"-"     {return sym(sym.MINUS);}
+"*"     {return sym(sym.STAR);}
+"/"     {return sym(sym.DIV);}
+"<"     {return sym(sym.MIN);}
+">"     {return sym(sym.MAJ);}
+"<="    {return sym(sym.MIN_EQ);}
+"=<"    {return sym(sym.EQ_MIN);}
+">="    {return sym(sym.MAJ_EQ);}
+"=>"    {return sym(sym.EQ_MAJ);}
+"&"     {return sym(sym.AND);}
+"|"     {return sym(sym.OR);}
+"!"     {return sym(sym.NOT);}
 
-"["     {return symbol(sym.SO);}
-"]"     {return symbol(sym.SC);}
+"["     {return sym(sym.SO);}
+"]"     {return sym(sym.SC);}
 
-"int"   {return symbol(sym.INT_TYPE);}
-"double" {return symbol(sym.DOUBLE_TYPE);}
+"int"   {return sym(sym.INT_TYPE);}
+"double" {return sym(sym.DOUBLE_TYPE);}
 
-print   {return symbol(sym.PRINT);}
-if      {return symbol(sym.IF);}
-while   {return symbol(sym.WHILE);}
-else    {return symbol(sym.ELSE);}
-;       {return symbol(sym.S);}
-,       {return symbol(sym.CM);}
+print   {return sym(sym.PRINT);}
+if      {return sym(sym.IF);}
+while   {return sym(sym.WHILE);}
+else    {return sym(sym.ELSE);}
+;       {return sym(sym.S);}
+,       {return sym(sym.CM);}
 
-{id}      {return symbol(sym.ID, yytext());}
-{integer} {return symbol(sym.INT, new Integer(yytext()));}
-{double}  {return symbol(sym.DOUBLE, new Double(yytext()));}
+{id}      {return sym(sym.ID, yytext());}
+{integer} {return sym(sym.INT, new Integer(yytext()));}
+{double}  {return sym(sym.DOUBLE, new Double(yytext()));}
 
 "/*" ~ "*/"     {;}
 
