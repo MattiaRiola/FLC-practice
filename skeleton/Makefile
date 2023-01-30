@@ -1,30 +1,31 @@
-default: clean scanner parser compile
+default: run
 
-compile:
-	javac *.java
+debug: rundebug
 
-scanner:
-	jflex scanner.jflex
-	
-parser:
-	java java_cup.Main -parser parser parser.cup
-	
 clean:
-
 	rm -fr parser.java Yylex.java sym.java
 	rm -vfr *.class
 	rm -vfr *.*~
+
+scanner: clean
+	jflex scanner.jflex
 	
-init:
-	mkdir source build
+parser: scanner
+	java java_cup.Main -parser parser parser.cup
 	
-run:
+compile: parser
+	javac *.java
+	
+run: compile
 	java Main test.txt
 
 new: default run
 
-debug: clean scanner cupdebug compile run
-
-cupdebug:
+cupdebug: scanner
 	java java_cup.Main -dump_grammar -parser parser parser.cup 
 
+compiledebug: cupdebug
+	javac *.java
+
+rundebug: compiledebug
+	java Main test.txt -debug
