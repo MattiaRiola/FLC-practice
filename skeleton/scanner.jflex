@@ -23,11 +23,11 @@ import java_cup.runtime.*;
 %}
 
 
+nl = \n | \r | \r\n
+
+
 %%
 
-
-
-nl = \n | \r | \r\n
 
 \r | \n | \r\n | " " | \t	{;}
 
