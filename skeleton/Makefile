@@ -2,6 +2,8 @@ default: run
 
 debug: rundebug
 
+run_scanner: scanner_only
+
 clean:
 	rm -fr parser.java Yylex.java sym.java scanner.java
 	rm -vfr *.class
@@ -29,3 +31,11 @@ compiledebug: cupdebug
 
 rundebug: compiledebug
 	java Main test.txt -debug
+
+
+compile_scanner_only: scanner
+	javac Yylex.java
+
+scanner_only: compile_scanner_only
+	echo "Add manually the %standalone configuration in jflex file"
+	java Yylex test.txt
