@@ -1,0 +1,140 @@
+import java_cup.runtime.*;
+import java.util.*;
+import java.io.*;
+
+init with 		{:
+
+:};
+
+parser code 	{:
+	
+	public void report_error(String message, Object info) {
+		StringBuffer m = new StringBuffer(message);
+		if (info instanceof Symbol) {
+			if (((Symbol)info).left != 1 && ((Symbol)info).right != 1) {
+				if (((Symbol)info).left != -1 && ((Symbol)info).right != -1) {
+					int line = (((Symbol)info).left) + 1;
+					int column = (((Symbol)info).right) + 1;
+					m.append(" (line " + line + " column " + column + ")");
+				}
+			}
+			System.err.println(m);
+		}
+	}
+	
+	public Object stack(int position) {
+		return (((Symbol)stack.elementAt(tos + position)).value);
+	}
+:};
+
+action code 	{:
+	public HashMap<String, Boolean> table = new HashMap<>();
+:};
+
+//////////////////////////////////
+///// SYMBOLS DECLARATION
+/////////////////////////////////
+
+terminal TOKEN1, TOKEN2, TOKEN3, HASHTAG;
+terminal CMP, EQ, AND, OR, NOT, CM, SCO, RO, RC, SO, SC;
+terminal PLUS, STAR;
+terminal O, TRUE, FALSE;
+terminal EVAL, SAVE, CASE_T, CASE_F;
+terminal String VAR;
+terminal Integer INT;
+
+non terminal prog, prog_ok, header, program, token1_2;
+non terminal instl, assignl, assign, EMPTY;
+non terminal Boolean inst, eval_ex, save_ex, case_ex;
+non terminal Boolean bool;
+non terminal Integer value, offset;
+
+precedence left OR;
+precedence left AND;
+precedence right NOT;
+precedence left PLUS;
+precedence left STAR;
+
+//////////////////////////////////
+///// GRAMMAR
+/////////////////////////////////
+
+start with prog;
+
+prog 		::= prog_ok 	{: System.out.println("Syntax is correct"); :}
+		| error 			{: parser.report_error("Error", null); :}
+;
+
+prog_ok 	::= header HASHTAG program
+;
+
+header 		::= token1_2 TOKEN3 SCO token1_2 TOKEN3 SCO token1_2
+;
+
+token1_2 	::= | token1_2 TOKEN1 SCO | token1_2 TOKEN2 SCO
+;
+
+program 	::= instl
+;
+
+instl 		::= inst inst inst inst | inst inst instl
+;
+
+inst 		::= eval_ex:x SCO	{: RESULT = x; :}
+			| save_ex:x SCO		{: RESULT = x; :}
+			| case_ex:x SCO		{: RESULT = x; :}
+;
+
+eval_ex 	::= EVAL bool:x {: 
+								System.out.println(x ? "TRUE" : "FALSE");
+								RESULT = x; 
+							:}
+;
+
+save_ex 	::= SAVE assignl{: 
+								System.out.println("FALSE");
+								RESULT = false; 
+							:}
+;
+
+case_ex 	::= CASE_T bool:x CM CASE_F bool:y
+					{:
+						Boolean instr = (Boolean) parser.stack(-5);
+						if (instr) {
+							RESULT = x;
+						} else {
+							RESULT = y;
+						}
+						System.out.println(RESULT ? "TRUE" : "FALSE");
+					:}
+;
+
+assignl 	::= assignl CM assign
+			| EMPTY EMPTY assign
+;
+
+assign 		::= VAR:x EQ bool:y {: table.put(x, y); :}
+			| VAR:x EQ offset:y {: table.put(x, (Boolean)parser.stack(-5 + y)); :}
+;
+
+offset 		::= O SO INT:x SC 	{: RESULT = x; :}
+;
+
+bool 		::= RO bool:x RC 	{: RESULT = x; :}
+		| TRUE 					{: RESULT = true; :}
+		| FALSE 				{: RESULT = false; :}
+		| bool:x AND bool:y 	{: RESULT = x && y; :}
+		| bool:x OR bool:y 		{: RESULT = x || y; :}
+		| NOT bool:x 			{: RESULT = !x; :}
+		| value:x CMP value:y 	{: RESULT = x == y; :}
+		| VAR:x 				{: RESULT = table.get(x); :}
+;
+
+value 		::= RO value:x RC 	{: RESULT = x; :}
+		| value:x PLUS value:y 	{: RESULT = x + y; :}
+		| value:x STAR value:y 	{: RESULT = x * y; :}
+		| INT:x 				{: RESULT = x; :}
+;
+
+EMPTY 		::= 
+;

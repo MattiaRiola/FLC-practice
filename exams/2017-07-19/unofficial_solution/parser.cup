@@ -1,0 +1,191 @@
+import java.io.*;
+import java_cup.runtime.*;
+import java.util.HashMap;
+import java.util.List;
+import java.util.LinkedList;
+
+init with {:
+    symbol_table = new HashMap<String, Integer>();
+:};
+
+parser code {:
+    public HashMap<String, Integer> symbol_table;
+
+    public static void main(String argv[]){
+	try {
+        /* Scanner instantiation */
+        scanner l = new scanner(new FileReader(argv[0]));
+        /* Parser instantiation */
+        parser p = new parser(l);
+        /* Run the parser */
+        Object result = p.parse().value;      
+      } catch (NullPointerException e) {
+        e.printStackTrace();
+              System.err.println("Syntax error");
+      } catch (FileNotFoundException e){
+              System.err.println("Errore opening file " + argv[0]);
+      } catch (Exception e){
+              e.printStackTrace();
+      }
+    }
+  
+    // Redefinition of error functions
+    public void report_error(String message, Object info) {
+        System.err.print("ERROR: Syntax error");
+        if (info instanceof Symbol) {
+            if (((Symbol)info).left != -1) {
+                int line = (((Symbol)info).left) + 1;
+                int column = (((Symbol)info).right) + 1;
+                System.err.print(" (row " + line + ", column " + column + "): " + message);
+            } else System.err.print(": " + message);
+        }
+        else System.err.print(": " + message);
+    }
+    public void syntax_error(Symbol cur_token) { }
+
+    // Return actual symbol
+    /* It returns the object of type Symbol in the top of the parser stack.
+    */
+    public Symbol getToken() {
+        return ((Symbol)stack.elementAt(tos));
+    }
+    
+    // Return semantic value of symbol in position (position)
+    public Object stack(int position) {
+        return (((Symbol)stack.elementAt(tos + position)).value);
+    }
+:};
+
+// Terminal tokens
+terminal SEP;
+terminal T1, T2, T3;
+terminal CONF, HUM, TEMP;
+terminal STORE, EQ;
+terminal PLUS, MINUS, TIMES, DIV, POW, AVG, UMINUS;
+terminal RO, RC, BO, BC;
+terminal CM, S;
+terminal CASE, IS, IN, RANGE, EQUAL;
+terminal String ID;
+terminal String INT;
+
+// Non Terminal tokens
+non terminal file;
+non terminal header, v1h, v1t1, v1hf, v1rt, v2h, v2nt3;
+non terminal semantic;
+non terminal Integer sint;
+non terminal Integer[] conf;
+non terminal commands, command, store;
+non terminal assignments, assignment;
+non terminal Integer expr;
+non terminal List expr_list;
+non terminal case, cond_list, cond, mod_list;
+non terminal Boolean range, equal;
+
+// Precedences and associativities
+// lower precedences
+precedence left PLUS, MINUS;
+precedence left TIMES, DIV;
+precedence left POW;
+precedence left UMINUS;
+// higher precedences
+
+//////////////////////////////////////
+// Grammar start
+//////////////////////////////////////
+
+start with file;
+
+file ::= header SEP semantic;
+
+v1h ::= T1 T1 T1 T1 v1t1 v1hf;
+
+v1t1 ::= | T1 T1 v1t1;
+
+v1hf ::= v1rt v1rt | v1rt v1rt v1rt | v1rt v1rt v1rt v1rt v1rt v1rt v1rt v1rt v1rt;
+
+v1rt ::= T2 | T3;
+
+v2h ::= T3 v2nt3 T3 v2nt3;
+
+v2nt3 ::= | T1 v2nt3 | T2 v2nt3;
+
+header ::= v1h | v2h;
+
+semantic ::= CONF conf S commands;
+
+sint ::= INT:a {: RESULT = Integer.parseInt(a); :} |
+         PLUS INT:a {: RESULT = Integer.parseInt(a); :} |
+         MINUS INT:a {: RESULT = -Integer.parseInt(a); :};
+
+conf ::= HUM sint:a TEMP sint:b {: RESULT = new Integer[] { a, b }; :} |
+         TEMP sint:a HUM sint:b {: RESULT = new Integer[] { b, a }; :} |
+         TEMP sint:a {: RESULT = new Integer[] { 50, a }; :} |
+         HUM sint:a {: RESULT = new Integer[] { a, 20 }; :};
+
+commands ::= commands command |;
+
+command ::= store | case;
+
+store ::= STORE assignments S;
+
+assignments ::= assignments CM assignment | assignment;
+
+assignment ::= ID:a EQ expr:b {: parser.symbol_table.put(a, b); :};
+
+expr ::= expr:a PLUS expr:b {: RESULT = a + b; :} |
+         expr:a MINUS expr:b {: RESULT = a - b; :} |
+         expr:a TIMES expr:b  {: RESULT = a * b; :} |
+         expr:a DIV expr:b {: RESULT = a / b; :} |
+         RO expr:a RC {: RESULT = a; :} |
+         expr:a POW expr:b {: RESULT = (int)Math.pow((double)a, (double)b); :} |
+         PLUS expr:a {: RESULT = a; :} %prec UMINUS |
+         MINUS expr:a {: RESULT = -a; :} %prec UMINUS |
+         AVG RO expr_list:a RC {:
+           Integer total = 0;
+           for (int i = 0; i < a.size(); i++) {
+             total += (Integer)a.get(i);
+           }
+           total /= a.size();
+           RESULT = (int)total;
+         :} |
+         AVG RO RC {: RESULT = 0; :} |
+         INT:a {: RESULT = Integer.parseInt(a); :} |
+         ID:a {: RESULT = parser.symbol_table.get(a); :};
+
+expr_list ::= expr_list:a CM expr:b {:
+                RESULT = new LinkedList<Integer>();
+                RESULT.addAll(a); RESULT.add(b);
+              :} |
+              expr:a {: RESULT = new LinkedList<Integer>(); RESULT.add(a); :};
+
+case ::= CASE expr IS BO cond_list BC S;
+
+cond_list ::= cond_list {: RESULT = parser.stack(-3); :} cond |;
+
+cond ::= range | equal;
+
+range ::= IN RANGE expr:a CM expr:b {:
+            Integer expr = (Integer)parser.stack(-5);
+            RESULT = a < expr && expr < b;
+          :} BO mod_list BC;
+
+equal ::= EQUAL expr:a {:
+            Integer expr = (Integer)parser.stack(-2);
+            RESULT = expr == a;
+          :} BO mod_list BC;
+
+mod_list ::= mod_list TEMP expr:a S {:
+                Boolean exec = (Boolean)parser.stack(-5);
+                if (exec) {
+                  Integer[] ht = (Integer[])parser.stack(-16);
+                  ht[1] += a;
+                  System.out.println("T: " + ht[1] + " H: " + ht[0]);
+                }
+             :} | mod_list HUM expr:a S {:
+                Boolean exec = (Boolean)parser.stack(-5);
+                if (exec) {
+                  Integer[] ht = (Integer[])parser.stack(-16);
+                  ht[0] += a;
+                  System.out.println("T: " + ht[1] + " H: " + ht[0]);
+                }
+             :} |;

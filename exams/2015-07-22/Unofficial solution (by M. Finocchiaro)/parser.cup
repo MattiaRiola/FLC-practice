@@ -1,0 +1,155 @@
+import java_cup.runtime.*;
+import java.util.Map;
+import java.util.HashMap;
+import java.io.*;
+
+parser code {:
+	public void report_error(String message, Object info) {
+		StringBuffer m = new StringBuffer(message);
+		if (info instanceof Symbol) {
+			Symbol infoS = (Symbol) info;
+			if(infoS.left != -1 && infoS.right != -1) {
+				int line = infoS.left + 1;
+				int column = infoS.right + 1;
+				m.append("(line " + line + ", column "
+					+ column + ")");
+			}
+		}
+		System.err.println(m);
+	}
+
+    public Object stack(int position) {
+        return (((Symbol)stack.elementAt(tos+position)).value);
+    }
+
+:}
+
+
+action code {:
+	public Map symbolTable = new HashMap<String, Boolean>();
+:}
+
+terminal Integer INT;
+terminal String VAR;
+terminal TOKEN1, TOKEN2, TOKEN3;
+terminal EVALUATE_KW, CASET_KW, CASEF_KW, SAVE_KW; 
+terminal SEMI_COL, SEPARATOR, CMP, AND, OR, NOT, PLUS, STAR, ROUND_OPEN, ROUND_CLOSED, COMMA;
+terminal O, SQUARE_OPEN, SQUARE_CLOSED;
+terminal TRUE, FALSE, EQ;
+
+non terminal Integer OFFSET;
+non terminal Boolean B_EXPR;
+non terminal Integer INT_EXPR;
+non terminal Boolean INSTRUCTION, EVALUATE, CASE, SAVE;
+non terminal FILE, HEADER, PROGRAM, T1_T2_SET, INSTRUCTION_LIST, ASSIGNEMENT_LIST;
+non terminal ASSIGNEMENT, EMPTY;
+
+
+precedence left OR;
+precedence left AND;
+precedence right NOT;
+precedence left PLUS;
+precedence left STAR;
+
+start with FILE;
+
+FILE ::= HEADER SEPARATOR PROGRAM;
+T1_T2_SET ::= T1_T2_SET TOKEN1 SEMI_COL
+	       | T1_T2_SET TOKEN2 SEMI_COL
+	       | ;
+
+HEADER ::= T1_T2_SET TOKEN3 SEMI_COL T1_T2_SET TOKEN3 SEMI_COL;
+
+EVALUATE ::= EVALUATE_KW B_EXPR:e {:
+		System.out.println(e?"TRUE":"FALSE");
+		RESULT = e;
+	     :};
+
+CASE ::= CASET_KW B_EXPR:a COMMA CASEF_KW B_EXPR:b {:
+		Boolean last = (Boolean)parser.stack(-5);
+		if(last == null) {
+			System.out.println("Error, no previous expression!");
+			RESULT = null;
+		} else if (last.booleanValue()) {
+			System.out.println(a?"TRUE":"FALSE");
+			RESULT = a;
+		} else {
+			System.out.println(b?"TRUE":"FALSE");
+			RESULT = b;
+		}
+	:};
+
+OFFSET ::= O SQUARE_OPEN INT:i SQUARE_CLOSED {:
+		RESULT = i;
+	:};
+
+ASSIGNEMENT ::= VAR:v EQ B_EXPR:e {:
+		  	symbolTable.put(v, e);
+		:}
+		| VAR:v EQ OFFSET:o {:
+			symbolTable.put(v, (Boolean)parser.stack(o.intValue()-5));
+		:};
+
+ASSIGNEMENT_LIST ::= ASSIGNEMENT_LIST COMMA ASSIGNEMENT
+		  | EMPTY ASSIGNEMENT;
+
+SAVE ::= SAVE_KW ASSIGNEMENT_LIST {:
+            RESULT = false;
+            System.out.println("FALSE");
+        :};
+
+
+INSTRUCTION ::= EVALUATE:i SEMI_COL {:
+		RESULT = i;
+	     :}
+             | CASE:i SEMI_COL {:
+		RESULT = i;
+	     :}
+             | SAVE:i SEMI_COL {:
+		RESULT = i;
+             :};
+
+INSTRUCTION_LIST ::= INSTRUCTION INSTRUCTION INSTRUCTION_LIST | INSTRUCTION INSTRUCTION INSTRUCTION INSTRUCTION;
+
+PROGRAM ::= INSTRUCTION_LIST;
+
+INT_EXPR ::= ROUND_OPEN INT_EXPR:a ROUND_CLOSED {:
+		RESULT = a;
+	  :}
+	   | INT_EXPR:a PLUS INT_EXPR:b {:
+		RESULT = a.intValue() + b.intValue();
+	  :}
+	   | INT_EXPR:a STAR INT_EXPR:b {:
+		RESULT = a.intValue() * b.intValue();
+	  :}
+	   | INT:a {:
+		RESULT = a;
+	  :};
+
+B_EXPR ::= ROUND_OPEN B_EXPR:a ROUND_CLOSED {:
+		RESULT = a;
+	:}
+	 | B_EXPR:a AND B_EXPR:b {:
+		RESULT = a.booleanValue() && b.booleanValue();
+	:}
+	 | B_EXPR:a OR B_EXPR:b {:
+		RESULT = a.booleanValue() || b.booleanValue();
+	:}
+	 | NOT B_EXPR:a {:
+		RESULT = !a.booleanValue();
+	:}
+	 | VAR:a {:
+		RESULT = (Boolean)symbolTable.get(a);
+	:}
+	 | INT_EXPR:a CMP INT_EXPR:b {:
+		RESULT = a.equals(b);
+	:}
+	 | TRUE {:
+		RESULT = true;
+	:}
+	 | FALSE {:
+		RESULT = false;
+	:};
+
+EMPTY ::= ;
+

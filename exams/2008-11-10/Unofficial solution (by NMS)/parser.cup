@@ -1,0 +1,155 @@
+import java_cup.runtime.*;
+import java.util.*;
+
+init with  {:
+	varDbContainer = new HashMap<String, Double>();
+:}
+
+
+parser code {:
+
+	public Object stack(int position) 
+	{
+		return (((Symbol)stack.elementAt(tos+position)).value);
+	}
+
+	public void report_error(String message, Object info) 
+	{
+		//System.err.print("ERROR: " + message);
+		if (info instanceof Symbol)
+		{	if (((Symbol)info).left != -1)
+			{
+				int line = (((Symbol)info).left)+1;
+				int column = (((Symbol)info).right)+1;
+				System.err.print("Error on line " + line + ", column " + column
+				 + " [" + ((Symbol)info).toString() + "]: ");
+			}
+		}
+		else
+		{
+			System.err.println(message);
+		}
+		//else System.err.print(": ");
+    	}
+    	
+    	public void report_fatal_error(String message, Object info) 
+	{
+		//System.err.print("ERROR: " + message);
+		if (info instanceof Symbol)
+		{	if (((Symbol)info).left != -1)
+			{
+				int line = (((Symbol)info).left)+1;
+				int column = (((Symbol)info).right)+1;
+				System.err.print("Error on line " + line + ", column " + column
+				 + " [" + ((Symbol)info).toString() + "]: ");
+			}
+		}
+		else
+		{
+			System.err.println(message);
+		}
+		//else System.err.print(": ");
+    	}
+    	
+    
+    	public HashMap<String, Double> varDbContainer;
+:};
+
+
+// Terminal tokens
+terminal Double SCAL;
+terminal String IDD;
+terminal RO, RC, CM, S, C, VAR;
+terminal PLUS, MINUS, STAR, DIV, POW, SMINUS;
+terminal FN_STR, FN, DT_STR, DT, TM_STR, TM, EM_STR, EM ;
+
+
+// Non terminal tokens
+non terminal prog;
+non terminal Header, ListCmd, Cmd;
+non terminal Double Operation, Assignment;
+non terminal String Var;
+non terminal Double VarList;
+
+
+precedence left PLUS, MINUS;
+precedence left STAR, DIV;
+precedence left POW;
+precedence left RO;
+precedence left SMINUS;
+
+//////////////////////////////////////
+// Grammar start
+//////////////////////////////////////
+
+start with prog;
+
+prog 		::= Header ListCmd;
+
+Header		::= 	FN_STR C FN S DT_STR C DT S TM_STR C TM S EM_STR C EM S
+		|	FN_STR C FN S TM_STR C TM S DT_STR C DT S EM_STR C EM S ;
+
+ListCmd		::= ListCmd Cmd | ; 
+
+Cmd		::= Assignment 	S ;
+
+
+Assignment	::= Operation:num C VarList;
+			
+VarList		::= VarList:id_varlist CM {:
+					RESULT = (Double) parser.stack(-3); 
+				:} 				
+				VAR Var:id_val 
+				{:
+					Double theValue = new Double((Double) parser.stack(-2));	
+					parser.varDbContainer.put(id_val, theValue);
+					System.out.println(id_val + ": " + theValue.toString());
+					RESULT = theValue;
+				:}
+			| 	VAR Var:id_val
+				{:
+					Double theValue = new Double((Double) parser.stack(-3));	
+					parser.varDbContainer.put(id_val, theValue);
+					System.out.println(id_val + ": " + theValue.toString());
+					RESULT = theValue;
+				:};
+			
+			
+Operation	::= 	Operation:num1 PLUS Operation:num2 	{: RESULT = num1 + num2; :}
+		|	Operation:num1 MINUS Operation:num2 	{: RESULT = num1 - num2; :}
+		|	Operation:num1 STAR Operation:num2 	{: RESULT = num1 * num2; :}
+		|	Operation:num1 DIV Operation:num2 	{: RESULT = num1 / num2; :}
+		|	Operation:num1 POW Operation:num2 	{: RESULT = java.lang.Math.pow(num1, num2); :}
+		|	RO Operation:num1 RC 			{: RESULT = num1; :}
+		|	Var:idd {: 
+					if(parser.varDbContainer.get(idd) == null) 
+					{
+						parser.report_fatal_error("variable " + idd + " used befor assignment","ERROR");
+					} else
+					{
+						RESULT = parser.varDbContainer.get(idd);
+					}
+				:}
+		|	MINUS Var:idd {: 
+					if(parser.varDbContainer.get(idd) == null) 
+					{
+						parser.report_fatal_error("variable " + idd + " used befor assignment","ERROR");
+					} else
+					{
+						RESULT = -parser.varDbContainer.get(idd);
+					}
+				:} %prec SMINUS
+		|	SCAL:num {:
+					RESULT = num;
+				:} 
+		|	MINUS SCAL:num {:
+					RESULT = -num;
+				:} %prec SMINUS;
+				
+Var 		::= IDD:idv {: RESULT = idv; :} ;
+
+
+
+
+
+

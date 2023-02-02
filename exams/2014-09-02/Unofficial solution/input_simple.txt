@@ -1,0 +1,7 @@
+/* Start section */
+--%%%A1234b11;
+12:50:55;
+++--%%%aBCd;
+
+******
+/* Program section */

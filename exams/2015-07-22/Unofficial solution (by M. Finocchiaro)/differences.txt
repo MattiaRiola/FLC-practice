@@ -1,0 +1,25 @@
+NOTE: Line and column number refers to the final modified version.
+
+
+File: scanner.jflex
+
+Ln 60, Col 0:   {var}           {return symbol(sym.VAR, yytext());}
+                This line was accidentally deleted before saving the final version
+
+Ln 23, Col 92:  Missing '0?' was added
+Ln 25, Col 61:  Wrong '\' removed
+Ln 28, Col 62:  Missing '?' was added
+Ln 28, Col 47:  Missing '(' was added
+Ln 28, Col 113: Missing ')' was added
+Ln 22, Col 20:  [-+]? substituted with \-? due to abiguity with the PLUS token
+Ln 23, Col 92:  Missing '0?' was added
+
+
+File: parser.cup
+
+Ln 45, Col 27:  Added EMPTY as non terminal
+Ln 93, Col 39:  Missing COMMA was added
+Ln 93, Col 56:  Useless action was removed
+Ln 94, Col 13:  Replaced empty production with EMPTY ASSIGNEMENT
+Ln 96, Col 35:  Action was added
+Ln 154, Col 0:  EMPTY ::= ; was added

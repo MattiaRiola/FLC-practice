@@ -1,0 +1,111 @@
+import java_cup.runtime.*;
+import java.util.HashMap;
+import java.lang.Math;
+
+init with {:
+    st = new HashMap();
+
+    System.out.println("Achieved scores.\n");
+:};
+parser code
+{:
+	public static HashMap st;
+	public void syntax_error(Symbol simbolo_attuale)
+	{
+		StringBuffer m = new StringBuffer("Errore ");
+		if (cur_token.left != -1)
+		{
+			m.append("in linea " + (simbolo_attuale.left+1));
+			m.append(", colonna " + (simbolo_attuale.right+1));
+		}
+	m.append (", simbolo: " + (simbolo_attuale));
+	m.append (": Errore di sintassi");
+	
+	System.err.println(m);
+	}
+	public Object stack(int position)
+	{
+		return (((Symbol) stack.elementAt(tos+position)).value);
+	}
+:};
+
+terminal   CODEF,CODES,EMAIL,SH,SYM,COLON,COMA,EQ,DISTANCE,OP,CP,OA,CA,VALUE,WRITE,PLUS,STAR,IN;
+terminal String NAME,ID;
+terminal Double FLOAT;
+
+non terminal prog,prog_ok,lstart,lprogram,hc,hd,hb,he,hz,lins,ins,varas,value,linter ;
+non terminal Double exp,distan,range;
+non terminal Object[] lpoint;
+
+precedence left PLUS;
+precedence left STAR;
+
+
+start with prog;
+
+prog         ::= prog_ok {: System.out.print("Syntax Correct\n"); :};
+prog_ok      ::= lstart SH lprogram ;
+lstart       ::= CODEF hc | CODES hd |EMAIL SYM hb ;
+hc           ::= CODES he| CODEF hc |EMAIL SYM hb ; 
+hd           ::= CODEF hd | EMAIL SYM hz ;
+he           ::= CODEF he | EMAIL SYM hb|EMAIL SYM; 
+hb           ::= CODEF hb |CODES hz |CODES ;
+hz           ::= CODEF hz | CODEF  ;
+
+lprogram     ::= lins | ;
+lins         ::= ins ins |lins ins ins;
+ins          ::= varas|value ; 
+varas        ::=ID:i EQ exp:e SYM {:parser.st.put(i,e);:}  ;
+distan       ::=DISTANCE OP lpoint:l CP  {:Double x=new Double((Double)l[2]);
+				Double p=Math.sqrt(x); RESULT=p;:};
+
+lpoint       ::= OA exp:e COMA exp:x CA {:RESULT=new Object[3];
+			RESULT[0]=e.doubleValue();
+                        RESULT[1]=x.doubleValue();RESULT[2]=0.0;:} 
+                | lpoint:l COMA OA exp:e COMA exp:x CA{:Double x1=new Double((Double)l[0]);
+                       Double y1=new Double((Double)l[1]);
+			Double zz=new Double((Double)l[2]);
+			Double v=e.doubleValue()-x1;
+                        Double w=x.doubleValue()-y1;
+			Double z=(v*v)+(w*w); 
+			RESULT=new Object[3];
+			 RESULT[0]=e;
+                        RESULT[1]=x;
+			RESULT[2]=zz+z;    :} ;
+value        ::= VALUE exp:e linter SYM;
+linter       ::= IN{:RESULT = (Double) parser.stack(-1);:} range:r WRITE NAME:n{:if(r==1){System.out.println(n);}:}
+               |linter COMA IN{:RESULT = (Double) parser.stack(-3);:} range:r WRITE NAME:n {:if(r==1){System.out.println(n);}:} ;
+range        ::= OA exp:v COLON exp:w CA {:Double o=(Double) parser.stack(-5);
+						if(o>=v){if(o<=w) RESULT=1.0;}else RESULT=0.0;:}; 
+
+
+exp           ::= exp:v PLUS exp:u     {:RESULT= v+u;:}
+		| exp:v STAR exp:u     {:RESULT= v*u;:}
+		| OP exp:v CP          {:RESULT= v;:} 
+	        | FLOAT:f              {:RESULT=f;:}
+	        | ID:i                 {:Double d = (Double)parser.st.get(i); RESULT=d;:}     
+	        | distan:d             {:RESULT=d;:};
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

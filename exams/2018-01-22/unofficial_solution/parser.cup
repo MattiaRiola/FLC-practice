@@ -1,0 +1,157 @@
+import java.io.*;
+import java_cup.runtime.*;
+import java.util.HashMap;
+import java.util.List;
+import java.util.LinkedList;
+
+init with {:
+    symbol_table = new HashMap<String, Double>();
+:};
+
+parser code {:
+    public HashMap<String, Double> symbol_table;
+
+    public static void main(String argv[]){
+	try {
+        /* Scanner instantiation */
+        scanner l = new scanner(new FileReader(argv[0]));
+        /* Parser instantiation */
+        parser p = new parser(l);
+        /* Run the parser */
+        Object result = p.parse().value;      
+      } catch (NullPointerException e) {
+        e.printStackTrace();
+              System.err.println("Syntax error");
+      } catch (FileNotFoundException e){
+              System.err.println("Errore opening file " + argv[0]);
+      } catch (Exception e){
+              e.printStackTrace();
+      }
+    }
+  
+    // Redefinition of error functions
+    public void report_error(String message, Object info) {
+        System.err.print("ERROR: Syntax error");
+        if (info instanceof Symbol) {
+            if (((Symbol)info).left != -1) {
+                int line = (((Symbol)info).left) + 1;
+                int column = (((Symbol)info).right) + 1;
+                System.err.print(" (row " + line + ", column " + column + "): " + message);
+            } else System.err.print(": " + message);
+        }
+        else System.err.print(": " + message);
+    }
+    public void syntax_error(Symbol cur_token) { }
+
+    // Return actual symbol
+    /* It returns the object of type Symbol in the top of the parser stack.
+    */
+    public Symbol getToken() {
+        return ((Symbol)stack.elementAt(tos));
+    }
+    
+    // Return semantic value of symbol in position (position)
+    public Object stack(int position) {
+        return (((Symbol)stack.elementAt(tos + position)).value);
+    }
+    
+    public Double distance(Double[] f, Double[] l) {
+        return Math.sqrt(Math.pow(l[1] - f[1], 2) + Math.pow(l[0] - f[0], 2));
+    }
+:};
+
+
+// Terminal tokens
+terminal SEP;
+terminal T1, T2, T3;
+terminal PLUS, MINUS, TIMES, DIV, UMINUS;
+terminal RO, RC, SO, SC;
+terminal EQ;
+terminal FZ, IF, CM, IN, RANGE, PRINT, S, C;
+terminal PATH, MAX;
+terminal String ID;
+terminal String QUOTED;
+terminal String REAL;
+
+// Non Terminal tokens
+non terminal file, program;
+non terminal nt1, header;
+non terminal Double expr;
+non terminal ass;
+non terminal Integer fz_op;
+non terminal Double[] fz_point;
+non terminal List fz_points;
+non terminal Double fz;
+non terminal String if_interval;
+non terminal if_intervals, if;
+
+// Precedences and associativities
+// lower precedences
+precedence left PLUS, MINUS;
+precedence left TIMES, DIV;
+precedence left UMINUS;
+// higher precedences
+
+//////////////////////////////////////
+// Grammar start
+//////////////////////////////////////
+
+start with file;
+
+file ::= header SEP program;
+
+nt1 ::= | T2 nt1 | T3 nt1;
+
+header ::= nt1 T1 nt1 T1 nt1;
+
+expr ::= expr:a PLUS expr:b {: RESULT = a + b; :} |
+         expr:a MINUS expr:b {: RESULT = a - b; :} |
+         expr:a TIMES expr:b  {: RESULT = a * b; :} |
+         expr:a DIV expr:b {: RESULT = a / b; :} |
+         RO expr:a RC {: RESULT = a; :} |
+         MINUS expr:a {: RESULT = -a; :} %prec UMINUS |
+         REAL:a {: RESULT = Double.parseDouble(a); :} |
+         ID:a {: RESULT = parser.symbol_table.get(a); :} |
+         fz:a {: RESULT = a; :};
+
+ass ::= ID:a EQ expr:b S {: parser.symbol_table.put(a, b); :};
+
+fz_op ::= PATH {: RESULT = 1; :} | MAX {: RESULT = 2; :};
+
+fz_point ::= SO expr:x CM expr:y SC {: RESULT = new Double[] { x, y }; :};
+
+fz_points ::= fz_point:a {: 
+                RESULT = new LinkedList<Double[]>();
+                RESULT.add(a);
+              :} | fz_point:a CM fz_points:b {: 
+                RESULT = new LinkedList<Double[]>();
+                RESULT.add(a);
+                RESULT.addAll(b);
+              :};
+
+fz ::= FZ RO fz_op:o CM fz_points:p RC {:
+         Double total = 0.;
+         Double max = 0.;
+         List<Double[]> points = (List<Double[]>)p;
+         for (int i = 0; i < points.size() - 1; i++) {
+           Double distance = parser.distance(points.get(i), points.get(i + 1));
+           total += distance;
+           if (max < distance) max = distance;
+         }
+         RESULT = (o == 1) ? total : max;
+       :};
+
+if_interval ::= IN RANGE SO expr:s C expr:e SC PRINT QUOTED:q {:
+                  Double expr1 = (Double) parser.stack(-10);
+                  if (s <= expr1 && expr1 <= e) System.out.println(q);
+                :};
+
+if_intervals ::= if_intervals {:
+                   RESULT = (Double) parser.stack(-1);
+                 :} CM if_interval | {:
+                   RESULT = (Double) parser.stack(-1);
+                 :} if_interval;
+
+if ::= IF expr:e if_intervals S;
+
+program ::= | ass program | fz program | if program;

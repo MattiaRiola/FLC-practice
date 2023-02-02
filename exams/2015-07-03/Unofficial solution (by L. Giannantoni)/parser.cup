@@ -1,0 +1,206 @@
+import java_cup.runtime.*;
+import java.math.*;
+import java.io.*;
+import java.util.*;
+
+init with {:
+    map = new HashMap();
+
+	System.out.println("Output:");
+:}
+
+parser code {:
+    HashMap map;
+    
+    public void syntax_error(Symbol current_symbol) {
+      StringBuffer m = new StringBuffer("Error");
+
+      if (current_symbol.left != -1) {                
+        m.append(" in line " + (current_symbol.left+1));   
+        m.append(", column " + (current_symbol.right+1));
+      }
+      m.append(", symbol: " + (current_symbol));
+      m.append(" : Syntax Error");
+   
+      System.err.println(m);
+    } 
+
+    /* Return semantic value of symbol in position (position) */
+    public Object stack(int position) {
+      return (((Symbol)stack.elementAt(tos + position)).value);
+    }
+:};
+
+action code {:
+	public static void p(Object o) {
+		System.out.print(o);
+	}
+	public static void pln(Object o) {
+		System.out.println(o);
+	}
+
+	class MyObj {
+	    private Integer oxygen;
+	    private Integer cells;
+	    
+	    MyObj(Integer oxygen, Integer cells){
+	        this.oxygen = oxygen;
+	        this.cells = cells;
+	    }
+
+	    Integer getOxygen(){
+	        return this.oxygen;
+	    }
+	    Integer getCells(){
+	        return this.cells;
+	    }
+
+	    void setOxygen(Integer x){
+	    	this.oxygen = x;
+	    }
+	    void setCells(Integer x){
+	    	this.cells = x;
+	    }
+	};
+:};
+
+
+//terminal tokens
+terminal String OXYGEN, CELLS;
+terminal Integer INT;
+terminal Float FLOAT;
+terminal SEPARATOR, SEMICOLON, MOD_STATE1, MOD_STATE2, PLUS, MINUS, COLON;
+terminal CODE1, CODE2, COMMA, MAX, RO, RC, TEMP, FOOD;
+
+// Non terminal tokens
+non terminal file, description_section, c1, c2, S, A, B, C, D, E, F, G, H, I, J, K, simulation_section;
+non terminal String param, sign;
+non terminal Integer max_func;
+non terminal Float var, var_list;
+non terminal Float[] marker1, marker2;
+non terminal MyObj initial_instructions, command, command_list, mod_state1, mod_state2;
+non terminal Integer int, int_list;
+
+//GRAMMAR START
+start with file;
+
+file ::= description_section SEPARATOR simulation_section
+;
+
+/* description section */
+description_section ::= S
+;
+
+S ::= c1 A | c2 J ;
+A ::= c1 B ;
+B ::= c1 C ;
+C ::= c2 D | c1 I ;
+I ::= c1 C ;
+D ::= c2 E ;
+E ::= | c2 F ;
+F ::= | c2 G ;
+G ::= c2 H ;
+H ::= ;
+J ::= c1 J | c2 K ;
+K ::= | c1 K ;
+
+c1 ::= CODE1 SEMICOLON ;
+c2 ::= CODE2 SEMICOLON ;
+
+/* simulation section */
+simulation_section ::= initial_instructions command_list
+;
+
+initial_instructions ::= OXYGEN INT:o SEMICOLON CELLS INT:c SEMICOLON {:
+						RESULT = new MyObj(o, c);
+					:}
+					| CELLS INT:c SEMICOLON OXYGEN INT:o SEMICOLON {:
+						RESULT = new MyObj(o, c);
+					:}
+;
+
+command_list ::= command:res {:
+				pln("oxygen=" + res.getOxygen() + " cells=" + res.getCells());
+				RESULT = res;
+			:}
+			| command_list command:res {:
+				pln("oxygen=" + res.getOxygen() + " cells=" + res.getCells());
+				RESULT = res;
+			:}
+;
+
+command ::= mod_state1:res {: RESULT = res; :}
+		  | mod_state2:res {: RESULT = res; :}
+;
+
+mod_state1 ::= MOD_STATE1 OXYGEN sign:s max_func:x SEMICOLON {:
+				MyObj status = (MyObj)parser.stack(-5);
+				if(s.equals("+")) status.setOxygen(status.getOxygen() + x);
+				else status.setOxygen(status.getOxygen() - x);
+				RESULT = status;
+			:}
+			|  MOD_STATE1 CELLS sign:s max_func:x SEMICOLON {:
+				MyObj status = (MyObj)parser.stack(-5);
+				if(s.equals("+")) status.setCells(status.getCells() + x);
+				else status.setCells(status.getCells() - x);
+				RESULT = status;
+			:}
+;
+
+sign ::=  PLUS {: RESULT = new String("+"); :}
+		| MINUS {: RESULT = new String("-"); :}
+;
+
+max_func ::= MAX RO int_list:x RC {: RESULT = x; :}
+;
+
+int_list ::=  int:n {: RESULT = n; :}
+			| int_list:m COMMA int:n {: RESULT = m > n ? m : n; :}
+			| int_list:m COMMA max_func:n {: RESULT = m > n ? m : n; :}
+			| MAX RO int_list:m COMMA int:n RC {: RESULT = m > n ? m : n; :}
+;
+
+int ::= {: RESULT = 0; :}
+		| INT:n {: RESULT = n; :} 
+;
+
+mod_state2 ::= MOD_STATE2 TEMP FLOAT FOOD FLOAT param:p COLON marker1 var_list:res SEMICOLON {:
+				MyObj status = (MyObj)parser.stack(-10);
+				if(p.equals("OXYGEN")) status.setOxygen(status.getOxygen() + (int)Math.floor(res));
+				else status.setCells(status.getCells() + (int)Math.floor(res));
+				RESULT = status;
+			:}
+;
+
+marker1 ::= {:
+				RESULT = new Float[2];
+				RESULT[0] = (Float)parser.stack(-4); // temp float
+				RESULT[1] = (Float)parser.stack(-2); // food float
+			:}
+;
+
+var_list ::= var:x {: RESULT = x; :}
+			| var_list:x COMMA marker2 var:y {: RESULT = x + y; :}
+;
+
+marker2 ::= {: RESULT = (Float[])parser.stack(-2); :} // get Float[2] object
+;
+
+var ::= sign:s INT:n TEMP {:	
+			if(s.equals("+"))		
+				RESULT = n * ((Float[])parser.stack(-3))[0]; // get temp from Float[2] object 
+			else
+				RESULT = - n * ((Float[])parser.stack(-3))[0]; // get temp from Float[2] object 
+		:}
+		| sign:s INT:n FOOD {:
+			if(s.equals("+"))
+				RESULT = n * ((Float[])parser.stack(-3))[1]; // get food from Float[2] object
+			else
+				RESULT = - n * ((Float[])parser.stack(-3))[1]; // get food from Float[2] object
+
+		:}
+;
+
+param ::= OXYGEN:s {: RESULT = s; :}
+		| CELLS:s {: RESULT = s; :}
+;

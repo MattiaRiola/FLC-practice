@@ -1,0 +1,96 @@
+import java_cup.runtime.*;
+import java.util.HashMap;
+import java.lang.Math;
+
+init with {:
+    st = new HashMap();
+
+    System.out.println("Achieved scores.\n");
+:};
+parser code
+{:
+	public static HashMap st;
+	public void syntax_error(Symbol simbolo_attuale)
+	{
+		StringBuffer m = new StringBuffer("Errore ");
+		if (cur_token.left != -1)
+		{
+			m.append("in linea " + (simbolo_attuale.left+1));
+			m.append(", colonna " + (simbolo_attuale.right+1));
+		}
+	m.append (", simbolo: " + (simbolo_attuale));
+	m.append (": Errore di sintassi");
+	
+	System.err.println(m);
+	}
+	public Object stack(int position)
+	{
+		return (((Symbol) stack.elementAt(tos+position)).value);
+	}
+:};
+
+terminal  DATE,SH,CODE,TITLENAME,SYM,COLON,COMA,P,EURO;
+terminal String CODICET;
+terminal Integer YEAR;
+terminal Double FLOAT,FLOATS;
+
+non terminal prog,prog_ok,headerl,lgb,hc,hd,lgbb,linvest;
+non terminal HashMap rendi,lren;
+non terminal Double ln,gb,listin,lin ;
+start with prog;
+
+prog         ::= prog_ok {: System.out.print("Syntax Correct\n"); :};
+prog_ok      ::= headerl SH lgb SH linvest ;
+headerl      ::= | DATE SYM | DATE SYM hc | CODE SYM | CODE SYM hd ;
+hc           ::= CODE SYM | CODE SYM hc ; 
+hd           ::= DATE SYM hc | CODE SYM | DATE SYM | CODE SYM hd ;
+lgb          ::= lgbb lgbb lgbb | lgbb lgbb lgb ;
+lgbb         ::= CODICET:c TITLENAME COLON lren:m SYM{: parser.st.put(c,m);:} ; 
+lren         ::= rendi:m {:RESULT=m;:} |  ;
+rendi        ::= YEAR:x FLOAT:y P {: HashMap<Integer, Double> m = new HashMap<Integer, Double>();
+				 m.put(x, (y/100));
+				 RESULT = m;
+			      :} 
+		|rendi:m COMA YEAR:x FLOAT:y P {:m.put(x,y/100); RESULT=m;:} ;
+linvest      ::= |lin:t {:System.out.println("Totale: "+t+" euro");:};
+lin          ::=gb:t {:RESULT=t;:} | gb:t gb:m lin:n {:RESULT=t+m+n;:}   ;
+gb           ::= CODICET COLON listin:l SYM {:RESULT=l;:} ;
+listin       ::= ln:d {: RESULT=d;:} | {: RESULT = 0.0; :};
+ln           ::= YEAR:v YEAR:w FLOATS:f EURO 
+				{: String cod = (String)parser.stack(-5);
+				   HashMap hash = (HashMap)parser.st.get(cod);
+				   Double d = (Double)hash.get(v);
+				   Double val2 = java.lang.Math.pow(1+d.doubleValue(), (w.intValue()-v.intValue()+1));
+				   Double val = f.doubleValue()*val2.doubleValue();
+				   System.out.println(cod+": "+val+" euro");
+	                           RESULT = val;:} 
+		|ln:d COMA YEAR:v YEAR:w FLOATS:f EURO
+				{: String cod = (String)parser.stack(-7);
+				   HashMap hash = (HashMap)parser.st.get(cod);
+				   Double da = (Double)hash.get(v);
+				   Double val2 = java.lang.Math.pow(1+da.doubleValue(), (w.intValue()-v.intValue()+1));
+				   Double val = f.doubleValue()*val2.doubleValue();
+				   System.out.println(cod+": "+val+" euro");
+	                           RESULT = d.doubleValue()+val.doubleValue();:} ;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

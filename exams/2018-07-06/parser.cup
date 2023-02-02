@@ -1,0 +1,411 @@
+import java_cup.runtime.*;
+import java.io.*;
+import java.util.*;
+
+init with {:
+    symbol_table = new HashMap();
+:};
+
+parser code {:
+    public HashMap symbol_table;
+    // To access semantic values	
+    public Object stack ( int position){
+    	// returns the object at the specified position
+	// from the top (tos) of the stack
+	return(((Symbol)stack.elementAt(tos+position)).value);
+    }
+:};
+
+action code {:
+
+	class Drone{
+		public Integer x;
+		public Integer y;
+		public Integer z;
+		public Integer battery;
+
+		Drone(Integer x, Integer y, Integer z, Integer battery){
+			this.x=x;
+			this.y=y;
+			this.z=z;
+			this.battery=battery;
+		}
+		
+		Integer get(String cc){
+			if(cc.equals("x"))
+				return x;
+			if(cc.equals("y"))
+				return y;
+			if(cc.equals("z"))
+				return z;
+			return null;
+		}
+		
+		void printPosition(){
+			System.out.println("BATTERY "+battery+" - POS: "+x+" "+y+" "+" "+z);
+		}
+	};
+
+	class ValueLs{
+		List<Integer> list;
+		int counter;
+		
+		ValueLs(Integer x){
+			list=new ArrayList<>();
+			list.add(x);
+			counter=1;		
+		}
+		
+		void add(Integer x){
+			list.add(x);
+			counter++;
+		}
+
+		Float getMax(){
+			if(list.isEmpty())
+				return null;
+			Integer max=list.get(0);
+			for(Integer x:list){
+				if(x.intValue()>max.intValue()){
+					max=x;			
+				}			
+			}
+			return new Float(max);
+					
+		}
+
+		Float avg(){
+			Integer sum=0;
+			for(Integer x:list){
+				sum+=x.intValue();			
+			}
+			return new Float(sum)/(float)counter;
+		}
+	};
+
+	class Ins{
+		String type;
+		Integer x,y,z,b;
+		String qstr;
+			
+		Ins(Integer x, Integer y, Integer z, Integer b){
+			this.x=x;
+			this.y=y;
+			this.z=z;
+			this.b=b;
+			this.type="change";
+		}
+		
+		Ins(String qstr){
+			this.qstr=qstr;
+			this.type="print";
+		}
+
+		void execute(Drone drone){
+			if(type.equals("print")){
+				System.out.println(qstr);
+			}else{
+				drone.x+=x;
+				drone.y+=y;
+				drone.z+=z;
+				drone.battery+=b;	
+				drone.printPosition();
+			}
+		}
+		
+	};
+
+	class InsList{
+		List<Ins> list;
+		
+		InsList(Ins ins){
+			list=new ArrayList<>();
+			list.add(ins);	
+		}
+		
+		void add(Ins ins){
+			list.add(ins);
+		}
+
+		void execute(Drone drone){
+			for(Ins ins:list){
+				ins.execute(drone);
+			}
+		}
+
+	};
+	
+	class Interval{
+			String type;
+			Integer v1, v2;
+			
+			Interval(String type, Integer v1){
+				this.type=type;
+				this.v1=v1;
+			}
+			
+			Interval(String type, Integer v1, Integer v2){
+				this.type=type;
+				this.v1=v1;
+				this.v2=v2;
+			}
+			
+			boolean isInInterval(Integer value){
+				boolean result=false;
+				
+				if(type.equals("lower") && value.intValue()<v1.intValue())
+					result=true;
+				if(type.equals("higher") && value.intValue()>v1.intValue())
+					result=true;
+				if(type.equals("between") && value.intValue()>v1.intValue() && value.intValue()<v2.intValue())
+					result=true;
+				return result;
+			}
+	
+	};
+    
+    
+    
+:};
+
+// Terminal tokens
+terminal TOK3, TOK2, TOK1, SEP;
+terminal String QSTR;
+terminal Integer INT;
+terminal DOT, MINUS, CM, S, RO, RC;
+terminal SET, DO, DONE, POS, BATTERY, PRINT, CHANGE, COMPUTE, AVG, MAX, IN_CASE, LOWER, HIGHER, BETWEEN, AND, X, Y, Z;
+
+// Non terminal tokens
+non terminal sPoint, header, drone, tok12Ls, commandLs, command, print, change, compute, incase;
+non terminal keyword, caseLs;
+non terminal Drone set, NT0, NT1, NT2, NT3;
+non terminal String cc, stat;
+non terminal ValueLs valueLs;
+non terminal Integer value;
+non terminal Ins ins, change2;
+non terminal InsList insLs;
+non terminal Interval interval;
+
+// Precedences and associativities
+// lower precedences
+// higher precedences
+
+
+//////////////////////////////////////
+// Grammar start
+//////////////////////////////////////
+
+start with sPoint;
+
+sPoint ::= header SEP drone;
+
+// HEADER
+header ::= tok12Ls 
+	|tok12Ls TOK3 tok12Ls TOK3 tok12Ls
+	|tok12Ls TOK3 tok12Ls TOK3 tok12Ls TOK3 tok12Ls
+;
+
+tok12Ls ::= tok12Ls TOK1
+	|tok12Ls TOK2
+	|
+;
+
+// DRONE
+drone ::= set commandLs
+;
+
+set ::= SET POS INT:x INT:y INT:z MINUS BATTERY INT:battery S
+	{:RESULT=new Drone(x,y,z, battery);
+	RESULT.printPosition();:}
+	|SET BATTERY INT:battery MINUS POS INT:x INT:y INT:z S
+	{:RESULT=new Drone(x,y,z, battery);
+	RESULT.printPosition();:}
+;
+
+commandLs ::= commandLs NT1 command NT1 command 
+	|NT0 command NT1 command NT1 command NT1 command NT1 command NT1 command NT1 command
+;
+
+NT0 ::=	{:RESULT=(Drone)parser.stack(0);:}
+; 
+
+NT1 ::=	{:RESULT=(Drone)parser.stack(-1);:}
+;
+
+command ::= print S
+	|change S
+	|compute S
+	|incase S
+;
+
+// PRINT
+print ::= PRINT QSTR:qstr
+	{:System.out.println(qstr);:}
+;
+
+// CHANGE
+change ::= CHANGE POS INT:x INT:y INT:z
+	{:Drone drone=(Drone)parser.stack(-5);
+	drone.x+=x;
+	drone.y+=y;
+	drone.z+=z;
+	drone.printPosition();
+	:}
+	|CHANGE BATTERY INT:b
+	{:Drone drone=(Drone)parser.stack(-3);
+	drone.battery+=b;
+	drone.printPosition();
+	:}
+	|CHANGE POS INT:x INT:y INT:z MINUS BATTERY INT:b
+	{:Drone drone=(Drone)parser.stack(-8);
+	drone.x=+x;
+	drone.y=+y;
+	drone.z=+z;
+	drone.battery=+b;
+	drone.printPosition();
+	:}
+	|CHANGE BATTERY INT:b MINUS POS INT:x INT:y INT:z
+	{:Drone drone=(Drone)parser.stack(-8);
+	drone.x+=x;
+	drone.y+=y;
+	drone.z+=z;
+	drone.battery+=b;
+	drone.printPosition();
+	:}
+;
+
+// COMPUTE
+compute ::= COMPUTE RO stat:type CM valueLs:list RC
+	{:if(type.equals("avg")){
+		System.out.println(list.avg());
+	}else{
+		System.out.println(list.getMax());
+	}:}	
+;
+
+stat ::= AVG
+	{:RESULT="avg";:}
+	|MAX
+	{:RESULT="max";:}
+;
+
+valueLs ::= valueLs:list CM NT3 value:x
+	{:list.add(x);
+	RESULT=list;:}
+	|NT2 value:x
+	{:RESULT=new ValueLs(x);
+	:}
+;
+
+NT2 ::= {:RESULT=(Drone)parser.stack(-4);:}
+;
+
+NT3 ::= {:RESULT=(Drone)parser.stack(-6);:}
+;
+
+value ::= INT:x
+	{:RESULT=x;:}
+	|POS DOT cc:cc
+	{:Drone drone=(Drone)parser.stack(-3);
+	RESULT=drone.get(cc);:}
+	|BATTERY
+	{:Drone drone=(Drone)parser.stack(-1);
+	RESULT=drone.battery;:}
+;
+
+// IN_CASE
+incase ::= IN_CASE keyword caseLs
+;
+
+keyword ::= POS DOT cc:cc
+	{:Drone drone=(Drone)parser.stack(-4);
+	RESULT=drone.get(cc);:}
+	|BATTERY
+	{:Drone drone=(Drone)parser.stack(-2);
+	RESULT=drone.battery;:}
+;
+
+caseLs ::= caseLs interval:inter DO insLs:list DONE
+	{:Integer ref=(Integer)parser.stack(-5);
+	Drone drone=(Drone)parser.stack(-7);
+	if(inter.isInInterval(ref)){
+		list.execute(drone);
+	}
+	:}
+	|interval:inter DO insLs:list DONE
+	{:Integer ref=(Integer)parser.stack(-4);
+	Drone drone=(Drone)parser.stack(-6);
+	if(inter.isInInterval(ref)){
+		list.execute(drone);
+	}
+	:}
+;
+
+insLs ::=insLs:list ins:ins
+	{:list.add(ins);
+	RESULT=list;:}
+	|ins:ins
+	{:RESULT=new InsList(ins);:}
+;
+
+ins ::= PRINT QSTR:qstr S
+	{:RESULT=new Ins(qstr);:}
+	|change2:ins S
+	{:RESULT=ins;:}
+;
+
+change2 ::= CHANGE POS INT:x INT:y INT:z
+	{:RESULT=new Ins(x,y,z,0);:}
+	|CHANGE BATTERY INT:b
+	{:RESULT=new Ins(0,0,0,b);:}
+	|CHANGE POS INT:x INT:y INT:z MINUS BATTERY INT:b
+	{:RESULT=new Ins(x,y,z,b);:}
+	|CHANGE BATTERY INT:b MINUS POS INT:x INT:y INT:z
+	{:RESULT=new Ins(x,y,z,b);:}
+;
+
+interval ::= LOWER INT:x
+	{:RESULT=new Interval("lower",x);:}
+	|HIGHER INT:x
+	{:RESULT=new Interval("higher",x);:}
+	|BETWEEN INT:x AND INT:y
+	{:RESULT=new Interval("between",x,y);:}
+;
+
+cc ::= X
+	{:RESULT="x";:}
+	|Y
+	{:RESULT="y";:}
+	|Z
+	{:RESULT="z";:}
+;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,189 @@
+import java.io.*;
+import java_cup.runtime.*;
+import java.util.HashMap;
+import java.util.List;
+import java.util.LinkedList;
+
+init with {:
+    symbol_table = new HashMap<String, HashMap<String, Double>>();
+:};
+
+parser code {:
+    public HashMap<String, HashMap<String, Double>> symbol_table;
+
+    public static void main(String argv[]){
+	try {
+        /* Scanner instantiation */
+        scanner l = new scanner(new FileReader(argv[0]));
+        /* Parser instantiation */
+        parser p = new parser(l);
+        /* Run the parser */
+        Object result = p.parse().value;      
+      } catch (NullPointerException e) {
+        e.printStackTrace();
+              System.err.println("Syntax error");
+      } catch (FileNotFoundException e){
+              System.err.println("Errore opening file " + argv[0]);
+      } catch (Exception e){
+              e.printStackTrace();
+      }
+    }
+  
+    // Redefinition of error functions
+    public void report_error(String message, Object info) {
+        System.err.print("ERROR: Syntax error");
+        if (info instanceof Symbol) {
+            if (((Symbol)info).left != -1) {
+                int line = (((Symbol)info).left) + 1;
+                int column = (((Symbol)info).right) + 1;
+                System.err.print(" (row " + line + ", column " + column + "): " + message);
+            } else System.err.print(": " + message);
+        }
+        else System.err.print(": " + message);
+    }
+    
+    // Return semantic value of symbol in position (position)
+    public Object stack(int position) {
+        return (((Symbol)stack.elementAt(tos + position)).value);
+    }
+:};
+
+
+// Terminal tokens
+terminal SEP;
+terminal T1, T2, T3;
+terminal ARROW, S, C, CM, PERC;
+terminal TIME, EXPENSE, EXTRA, COMPUTE, TO;
+terminal KM, KMH, EKM, DISC, E, DASH;
+terminal String QUOTED, INT, TWOD, REAL;
+
+// Non Terminal tokens
+non terminal file;
+non terminal header, t3;
+non terminal Double real, twod;
+non terminal Integer int;
+non terminal commands;
+non terminal distances, distance;
+non terminal HashMap destinations, destination;
+non terminal computes, ocompute, compute, cbody;
+non terminal times;
+non terminal Double time;
+non terminal expenses;
+non terminal Double expense;
+
+
+//////////////////////////////////////
+// Grammar start
+//////////////////////////////////////
+
+start with file;
+
+file ::= header SEP commands;
+
+header ::= t3 T1 S t3 T2 S t3 T1 S t3 | t3 T2 S t3 T1 S t3 T1 S t3 | t3 T1 S t3 T1 S t3 T2 S t3;
+t3 ::= | T3 S t3;
+
+real ::= REAL:a {: RESULT = Double.parseDouble(a); :};
+twod ::= TWOD:a {: RESULT = Double.parseDouble(a); :};
+int ::= INT:a {: RESULT = Integer.parseInt(a); :};
+
+commands ::= distance distance distance distances computes;
+distances ::= | distance distance distances;
+
+distance ::= QUOTED:a ARROW destinations:b S {: parser.symbol_table.put(a, b); :};
+destinations ::= destination:a CM destinations:b {:
+                   RESULT = b;
+                   b.putAll(a);
+                 :}
+                 | destination:a {: RESULT = a; :};
+destination ::= QUOTED:a real:b KM {:
+                  RESULT = new HashMap<String, Double>();
+                  RESULT.put(a,b);
+                :};
+
+computes ::= | compute ocompute;
+ocompute ::= | compute compute ocompute;
+
+compute ::= COMPUTE QUOTED:a TO QUOTED:b {: RESULT = new String[] {"0",a,b}; :} cbody S;
+cbody ::= TIME C {: RESULT = parser.stack(-2); :} times:a {: System.out.println("TOT: " + a); :} |
+          EXPENSE C {: RESULT = parser.stack(-2); :} expenses |
+          EXPENSE EXTRA TWOD:a C {: 
+            String[] cities = (String[])parser.stack(-4);
+            cities[0] = a;
+            RESULT = cities;
+          :} expenses:b {:
+            double min = Double.MAX_VALUE;
+            List<Double> exp = (List<Double>)b;
+            for (int i = 0; i < exp.size(); i++) {
+              double val = exp.get(i).doubleValue();
+              if (min > val) min = val;
+            }
+            System.out.println("MIN: " + min);
+          :};
+times ::= times:a CM {: RESULT = parser.stack(-2); :} time:b {:
+            RESULT = new Double(((Double)a).doubleValue()+b.doubleValue());
+          :} | time:a {: RESULT = a; :};
+time ::= int:a PERC int:b KMH {:
+           String [] cities = (String[])parser.stack(-4);
+           double distance = parser.symbol_table.get(cities[1]).get(cities[2]).doubleValue();
+           distance *= a.doubleValue();
+           distance /= 100;
+           distance /= b.doubleValue();
+           System.out.println(cities[0] + " " + distance);
+           Integer counter = Integer.parseInt(cities[0]);
+           counter = new Integer(counter.intValue() + 1);
+           cities[0] = counter.toString();
+           RESULT = new Double(distance);
+         :};
+
+expenses ::= expenses:a CM {: RESULT = parser.stack(-2); :} expense:b {:
+               List<Double> list = new LinkedList<Double>();
+               list.addAll((List<Double>)a);
+               list.add(b);
+               RESULT = list;
+             :} | expense:a {: 
+               List<Double> list = new LinkedList<Double>();
+               list.add(a);
+               RESULT = list;
+             :};
+expense ::= QUOTED:a twod:b EKM DASH DISC twod:c E {:
+              String[] cities = (String[])parser.stack(-7);
+              double distance = parser.symbol_table.get(cities[1]).get(cities[2]).doubleValue();
+              distance *= b.doubleValue();
+              distance -= c.doubleValue();
+              Double extra = Double.parseDouble(cities[0]);
+              distance -= extra.doubleValue();
+              System.out.println(a + " " + distance);
+              RESULT = new Double(distance);
+            :} |
+            QUOTED:a DISC twod:b E DASH twod:c EKM {:
+              String[] cities = (String[])parser.stack(-7);
+              double distance = parser.symbol_table.get(cities[1]).get(cities[2]).doubleValue();
+              distance *= c.doubleValue();
+              distance -= b.doubleValue();
+              Double extra = Double.parseDouble(cities[0]);
+              distance -= extra.doubleValue();
+              System.out.println(a + " " + distance);
+              RESULT = new Double(distance);
+            :} |
+            QUOTED:a twod:b EKM {:
+              String[] cities = (String[])parser.stack(-3);
+              double distance = parser.symbol_table.get(cities[1]).get(cities[2]).doubleValue();
+              distance *= b.doubleValue();
+              Double extra = Double.parseDouble(cities[0]);
+              distance -= extra.doubleValue();
+              System.out.println(a + " " + distance);
+              RESULT = new Double(distance);
+            :};
+
+
+
+
+
+
+
+
+
+
+
+

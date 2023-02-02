@@ -1,0 +1,109 @@
+/*** SETUP SECTION ***/
+// Contains all the directives needed for the parser, usually includes the cup library and
+// others. User code can also be defined in this section
+import java_cup.runtime.*;
+import java.io.InputStreamReader;
+import java.util.HashMap;
+import java.util.Vector;
+   
+
+init with {:
+	food_table = new HashMap();
+:};
+
+
+parser code {:
+	public HashMap food_table;
+
+	public void syntax_error(Symbol current_symbol) {
+		StringBuffer m = new StringBuffer("Error");
+
+		if (current_symbol.left != -1) {                
+			m.append(" in line " + (current_symbol.left+1));   
+			m.append(", column " + (current_symbol.right+1));
+		}
+		m.append(", symbol: " + (current_symbol));
+		m.append(" : Syntax Error");
+
+		System.err.println(m);
+	}
+
+	public Object stack ( int position){
+		// returns the object at the specified position
+		// from the top (tos) of the stack
+		return(((Symbol)stack.elementAt(tos+position)).value);
+	}
+:};
+
+action code {:
+
+:}
+
+/*** TERMINAL AND NON-TERMINAL SECTION ***/
+// Contains the definition of grammar start symbol, its terminal symbols (wich are passed from 
+// Jflex) and its non terminal symbols.
+terminal SEP, SC, CL, CM, EUHG, DINTRO, DATE, TIME, PEOPLE, HG;
+terminal String LID, UID;
+terminal Double FPRICE;
+terminal Integer NUMB;
+non terminal INPUT, SEC1, SEC2, FLI, FEL, DATETIME;
+non terminal Object SLI, SEL, BLI, BEL;
+non terminal String FID, GID;
+start with INPUT;
+
+/*** PRECEDENCES SECTION ***/
+
+/*** RULES SECTION ***/
+// Contains all productions, to wich can also be assigned an action
+INPUT ::= SEC1 SEP SEC2;
+
+SEC1 ::= FLI;
+
+FLI ::= FLI FEL SC | FEL SC ;
+
+FEL ::= FID:id FPRICE:price EUHG {: parser.food_table.put(id, price); :};
+
+FID ::= LID:id {: RESULT = id; :} 
+			| UID:id {: RESULT = id; :} ;
+
+SEC2 ::= DINTRO CL DATETIME SC BLI:total {:
+					System.out.println("TOTAL " + ((Double) total) + " euro");
+				:} ;
+
+DATETIME ::= DATE | DATE TIME | TIME DATE ;
+
+BLI ::= BLI:val1 BEL:val2 SC {:
+				RESULT = new Double (((Double) val1).doubleValue() + ((Double) val2).doubleValue());
+			:}
+			| BEL:val SC {: RESULT = new Double(((Double) val).doubleValue()); :} ;
+
+BEL ::= NUMB:num PEOPLE CL GID:name CL SLI:total {:
+				double tot = ((Double) total).doubleValue();
+				double splitted = tot / num.intValue();
+
+				System.out.println("Overall: total "+ tot +" euro, splitted " + splitted + " euro");
+				System.out.println("---> " + name + "(" + num + " people)");
+				System.out.println();
+				
+				RESULT = new Double(tot);
+			:} ;
+
+GID ::= UID:id {: RESULT = id; :} ;
+
+SLI ::= SLI:val1 CM {: RESULT = parser.stack(-6); :} SEL:val2 {:
+				RESULT = new Double (((Double) val1).doubleValue() + ((Double) val2).doubleValue());
+			:}
+			| {: RESULT = parser.stack(-4); :} SEL:val1 CM {: RESULT = parser.stack(-7); :} SEL:val2 {:
+				RESULT = new Double (((Double) val1).doubleValue() + ((Double) val2).doubleValue());
+			:} ;
+
+SEL ::= NUMB:val HG FID:id {:
+				double price = ((Double) parser.food_table.get(id)).doubleValue();
+				double total = val.intValue() * price;
+				int people = ((Integer) parser.stack(-3)).intValue();
+				double splitted = total / people;
+				
+				System.out.println(id + ": total " + total + " euro, splitted " + splitted + " euro");
+				
+				RESULT = new Double(total);
+			:} ;

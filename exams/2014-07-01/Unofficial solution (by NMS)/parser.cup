@@ -1,0 +1,243 @@
+/************************************************	
+ *				
+ *  EXAM OF FORMAL LANGUAGES AND COMPILERS  
+ *  JULY 1ST 2014		
+ *				
+ *  PARSER			
+ *					
+ ************************************************/
+
+import java_cup.runtime.*;
+import java.util.*;
+
+init with  {:
+	exam_list 	= new HashMap<String,  Double[]>();
+:}
+
+parser code {:
+	public HashMap<String,  Double[]> exam_list;  // Double[3] = {min, max, avg}
+	
+	public Object stack(int position) 
+	{
+		return (((Symbol)stack.elementAt(tos+position)).value);
+	}
+	
+	public void report_error(String message, Object info) 
+	{
+		if (info instanceof Symbol)
+		{	if (((Symbol)info).left != -1)
+			{
+				int line = (((Symbol)info).left)+1;
+				int column = (((Symbol)info).right)+1;
+				System.err.print("Error on line " + line + ", column " + column
+				 + " [" + ((Symbol)info).toString() + "]: ");
+			}
+		}
+		else
+		{
+			System.err.println(message);
+		}
+		
+    	}    	
+    	
+    	
+    	public void report_fatal_error(String message, Object info) 
+	{
+		if (info instanceof Symbol)
+		{	if (((Symbol)info).left != -1)
+			{
+				int line = (((Symbol)info).left)+1;
+				int column = (((Symbol)info).right)+1;
+				System.err.print("Fatal Error on line " + line + ", column " + column
+				 + " [" + ((Symbol)info).toString() + "]: ");
+			}
+		}
+		else
+		{
+			System.err.println(message);
+		}
+    	}
+    
+   	
+    
+:};
+
+
+// Terminal tokens
+terminal TOK1, DATE, EXAM, SCORES;
+terminal String STR_GEN;
+terminal Integer SCORE_VAL;
+terminal PRINT, IF, THEN, ELSE, END_IF;
+terminal RO, RC, S, CM, PT, CL;
+terminal MINUS;
+terminal MIN, MAJ;
+terminal AND, OR;
+terminal AVG_OP, MIN_OP, MAX_OP;
+terminal DASH, DIVIDER;
+terminal Double SCALAR;
+
+
+// Non terminal tokens
+non terminal prog;
+non terminal Header_sec, Exam_sec;
+non terminal Tok1, Tok2, Tok2List;
+non terminal ListCmd, ListCmd_unique, IfCmd, Cmd, ExamCmd;
+non terminal String ListScore;
+
+non terminal Double CmdOp;
+non terminal Integer CompExp, CompOp;
+non terminal Integer M, N, ListPrint;
+non terminal String PrintCmd;
+
+
+/* OPERATION PRECEDENCE */
+precedence left AND;
+precedence left OR;
+
+
+//////////////////////////////////////
+// Grammar start
+//////////////////////////////////////
+
+start with prog;
+
+prog 		::= Header_sec DIVIDER Exam_sec;
+Tok1		::= TOK1 S;
+Tok2		::= 	DATE MINUS DATE S 
+		|	DATE DASH DATE S ;
+
+Tok2List	::= Tok2List Tok2 | ;
+Header_sec	::= Tok2List Tok1 Tok2List Tok1 Tok2List ;
+
+Exam_sec	::= ListCmd;
+
+ListCmd		::= Cmd Cmd Cmd ListCmd_unique| ;
+ListCmd_unique	::= ListCmd_unique Cmd | Cmd;
+
+Cmd		::= ExamCmd S | IfCmd S;
+
+ExamCmd		::= EXAM STR_GEN:exm_name SCORES CL ListScore:LstVal
+			{:
+				String[] valS = LstVal.split(" ");
+				Double min, max, avg, curr;
+				curr = new Double(0);
+				min = new Double(35);
+				max = new Double(0);
+				
+				Double a= new Double(0);
+				for(int i = 0; i< valS.length; i++)
+				{
+					if(valS[i].trim().compareTo("") == 0)
+						continue;
+						
+					a = new Double(valS[i]);
+					if(a < min)
+						min = a;
+					if(a > max)
+						max = a;
+						
+					curr += a;
+				}
+				
+				avg = curr/(valS.length);
+				
+				Double outval[] = new Double[3];
+				outval[0] = min;
+				outval[1] = max;
+				outval[2] = avg;
+				parser.exam_list.put(exm_name, outval);
+			:};
+			
+ListScore	::= 	ListScore:LstVal CM STR_GEN SCORE_VAL:val
+			{:
+				RESULT = new String(LstVal + val.toString() + " ");
+			:}
+		|	STR_GEN SCORE_VAL:val
+			{:
+				RESULT = new String(val.toString() + " ");
+			:};
+			
+	
+IfCmd		::=	IF RO CompExp:ce_val RC THEN N ListPrint ELSE M ListPrint END_IF
+		|	IF RO CompExp:ce_val RC THEN N ListPrint END_IF;
+	
+M		::=	{:	/* ELSE: inverse number */
+				RESULT = (Integer)parser.stack(-2) == 0 ? 
+							new Integer(1) : 
+							new Integer(0) ;
+			:};
+			
+N		::=	{:
+				RESULT = (Integer)parser.stack(-2);
+			:};
+
+
+CmdOp		::=	STR_GEN:val PT AVG_OP	
+			{:
+				Double[] a = parser.exam_list.get(val);
+				if (a == null)
+					RESULT = null;
+				else
+					RESULT = a[2];
+			:}
+		|	STR_GEN:val PT MAX_OP	
+			{:
+				Double[] a = parser.exam_list.get(val);
+				if (a == null)
+					RESULT = null;
+				else
+					RESULT = a[1];
+			:}
+		|	STR_GEN:val PT MIN_OP	
+			{:
+				Double[] a = parser.exam_list.get(val);
+				if (a == null)
+					RESULT = null;
+				else
+					RESULT = a[0];
+			:}
+		|	SCALAR:val
+			{:
+				RESULT = new Double(val);
+			:};
+		
+
+CompExp		::=	CompExp:cmd1 AND CompExp:cmd2	{: RESULT = cmd1 & cmd2; :}
+		|	CompExp:cmd1 OR CompExp:cmd2	{: RESULT = cmd1 | cmd2; :}
+		|	CompOp:cmd1 {: RESULT = cmd1; :};
+
+CompOp		::=	CmdOp:cmd1 MIN CmdOp:cmd2	{: if(cmd1 < cmd2) RESULT = new Integer(1); else RESULT = new Integer(0); :}
+		|	CmdOp:cmd1 MAJ CmdOp:cmd2	{: if(cmd1 > cmd2) RESULT = new Integer(1); else RESULT = new Integer(0); :};
+		
+ListPrint	::=	ListPrint 
+			{:
+				RESULT = (Integer) parser.stack(-1);
+			:}
+			PrintCmd:val
+			{:				
+				if((Integer) parser.stack(-1) == 1)
+					System.out.println(val);
+			:}
+		|	
+			PrintCmd:val
+			{:				
+				if( ((Integer)parser.stack(-1)) == 1 )
+					System.out.println(val);
+			:};
+			
+			
+PrintCmd	::=	PRINT STR_GEN:val S
+			{:
+				RESULT = val;
+			:}
+			| PRINT CmdOp:val S
+			{:	
+				if(val != null)
+					RESULT = val.toString();
+				else
+					RESULT = new String("");
+			:};
+
+		
+
+

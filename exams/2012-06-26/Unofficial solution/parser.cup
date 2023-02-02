@@ -1,0 +1,144 @@
+import java_cup.runtime.*;
+import java.util.HashMap;
+
+init with {:
+    st = new HashMap();
+
+    System.out.println("Achieved scores.\n");
+:};
+parser code
+{:
+	public static HashMap st;
+	public void syntax_error(Symbol simbolo_attuale)
+	{
+		StringBuffer m = new StringBuffer("Errore ");
+		if (cur_token.left != -1)
+		{
+			m.append("in linea " + (simbolo_attuale.left+1));
+			m.append(", colonna " + (simbolo_attuale.right+1));
+		}
+	m.append (", simbolo: " + (simbolo_attuale));
+	m.append (": Errore di sintassi");
+	
+	System.err.println(m);
+	}
+	public Object stack(int position)
+	{
+		return (((Symbol) stack.elementAt(tos+position)).value);
+	}
+:};
+
+      
+terminal HOUR,PRODUCT,SYM,COLON,COMA,ARROW,EURO,STRING,STARS;
+terminal String USERCODE,AUCTIONINT,DURATION,CODE;
+terminal Integer INTEGER;
+terminal Double FLOAT ;
+
+non terminal prog,prog_ok,headerl,currenciesl,auctionl,hcodef,hcodes,currency,userl,auction,user;
+non terminal Object[] us,usl;
+start with prog;
+
+prog         ::= prog_ok {: System.out.print("Syntax Correct\n"); :};
+prog_ok      ::= headerl STARS currenciesl STARS auctionl ;
+headerl      ::= HOUR SYM headerl |CODE SYM hcodef ;
+hcodef       ::= HOUR SYM hcodef |CODE SYM hcodes |CODE ;
+hcodes       ::= HOUR SYM | HOUR SYM hcodes ;
+currenciesl  ::= currenciesl currency  | currency currency currency ;
+currency     ::= FLOAT:f STRING EURO COLON{:RESULT=f;:} userl SYM |FLOAT:f EURO EURO COLON {:RESULT=f;:} userl SYM  ;
+userl        ::= |userl COMA{:RESULT=(Double) parser.stack(-2);:} user
+                 | user;
+
+user         ::= USERCODE:u FLOAT:n {:Double rate=(Double)parser.stack(-2);
+                                      Double m = (Double)rate * (Double)n;
+				      parser.st.put(u,m);:};
+
+ 
+auctionl     ::= |auctionl auction auction ;
+auction      ::= AUCTIONINT:a{:System.out.println(a+":");:} COLON PRODUCT COLON DURATION:d ARROW
+                 {:String intValue = d.replaceAll("[^0-9]", ""); 
+                   int number= Integer.parseInt(intValue);
+		   Object[] res = new Object[3];
+	           res[0]=number;
+                   res[1]=new Double(0);
+		   res[2]="";
+		   RESULT=res;
+:} usl:lab SYM{:
+                    Double newcredit =(Double)parser.st.get((String)lab[2]) - (Double)lab[1];
+			parser.st.put ((String)lab[2], newcredit);     
+		    System.out.println("Winner is "+lab[2]+" price "+lab[1]+" euro");
+
+:} ;
+usl          ::= us:lab {:RESULT= lab;:} |usl:llab COMA {:RESULT = (Object[]) parser.stack(-1);:} us:labb {:RESULT=labb;:};
+us           ::= USERCODE:c COLON INTEGER:i COLON FLOAT:f EURO
+		{:Object[] o=(Object[]) parser.stack(-6);
+		  Integer dur=new Integer((Integer)o[0]);
+                  Double var=new Double((Double)o[1]);
+		  String str=new String((String)o[2]);
+		  if(f<var){
+			RESULT=new Object[3];
+			RESULT[0]=o[0];
+                        RESULT[1]=o[1];
+                        RESULT[2]=o[2];
+			System.out.println(c+":"+"Error, advance less than the current auction value");
+}
+                  else if(i>dur){
+                        RESULT=new Object[3];
+			RESULT[0]=o[0];
+                        RESULT[1]=o[1];
+                        RESULT[2]=o[2];
+			System.out.println(c+":"+"Error, advance out of time");
+}
+		  else{ Double am = (Double)parser.st.get(c);
+		        if(am<f){
+                        RESULT=new Object[3];
+			RESULT[0]=o[0];
+                        RESULT[1]=o[1];
+                        RESULT[2]=o[2];
+			System.out.println(c+":"+"Error, available only "+am+ " euro");
+}
+		  else {
+			RESULT=new Object[3];
+			RESULT[0]=o[0];
+                        RESULT[1]=f;
+                        RESULT[2]=c;
+                        System.out.println(c+":"+"new auction price "+f+" euro");}}
+:}
+
+
+|USERCODE:c COLON CODE:co COLON FLOAT:f EURO 
+		{:Object[] o=(Object[]) parser.stack(-6);
+		  Integer dur=new Integer((Integer)o[0]);
+                  Double var=new Double((Double)o[1]);
+		  String intValue = co.replaceAll("[^0-9]", ""); 
+                  int number= Integer.parseInt(intValue);
+		  if(f<var){
+                  
+                       RESULT=new Object[3];
+			RESULT[0]=o[0];
+                        RESULT[1]=o[1];
+                        RESULT[2]=o[2];
+System.out.println(c+":"+"Error, advance less than the current auction value");
+}
+                  else if(number>dur){
+                       RESULT=new Object[3];
+			RESULT[0]=o[0];
+                        RESULT[1]=o[1];
+                        RESULT[2]=o[2];
+System.out.println(c+":"+"Error, advance out of time");}
+		  else{ Double am= (Double)parser.st.get(c);
+		   if(am<f){
+                         RESULT=new Object[3];
+			RESULT[0]=o[0];
+                        RESULT[1]=o[1];
+                        RESULT[2]=o[2];
+System.out.println(c+":"+"Error, available only "+am+ " euro");}
+		  else{
+			RESULT=new Object[3];
+			RESULT[0]=o[0];
+                        RESULT[1]=f;
+                        RESULT[2]=c;
+                       System.out.println(c+":"+"new auction price "+f+" euro");}}
+:} ;
+
+
+

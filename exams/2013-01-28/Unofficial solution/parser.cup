@@ -1,0 +1,91 @@
+import java_cup.runtime.*;
+import java.util.HashMap;
+import java.lang.Math;
+
+init with {:
+    st = new HashMap();
+
+    System.out.println("Achieved scores.\n");
+:};
+parser code
+{:
+	public static HashMap st;
+	public void syntax_error(Symbol simbolo_attuale)
+	{
+		StringBuffer m = new StringBuffer("Errore ");
+		if (cur_token.left != -1)
+		{
+			m.append("in linea " + (simbolo_attuale.left+1));
+			m.append(", colonna " + (simbolo_attuale.right+1));
+		}
+	m.append (", simbolo: " + (simbolo_attuale));
+	m.append (": Errore di sintassi");
+	
+	System.err.println(m);
+	}
+	public Object stack(int position)
+	{
+		return (((Symbol) stack.elementAt(tos+position)).value);
+	}
+:};
+
+terminal SH,SYM,COLON,COMA,OP,CP,CODE,ID,OB,CB,ARROW,PLUS,MINUS,STAR,DIV,DATE;
+terminal String NAME;
+terminal Integer INTP;
+
+
+non terminal prog,prog_ok,headerl,ltask,lobj,hc,hd,obj,task,tas ;
+non terminal HashMap attr,lattr;
+non terminal Integer lequ,exp;
+
+precedence left PLUS, MINUS;
+precedence left STAR, DIV;
+
+start with prog;
+
+prog         ::= prog_ok {: System.out.print("Syntax Correct\n"); :};
+prog_ok      ::= headerl SH lobj SH ltask ;
+headerl      ::= CODE hc | DATE hd ;
+hc           ::= CODE hc | DATE hd |DATE|CODE; 
+hd           ::= DATE hd | CODE hc | CODE|DATE ; 
+lobj         ::= obj obj |lobj obj obj ;
+obj          ::= NAME:n COLON ID COLON OB lattr:m CB {: parser.st.put(n,m);:}
+               | NAME:n COLON COLON OB lattr:m CB {: parser.st.put(n,m);:} ;
+lattr        ::= attr:m {:RESULT = m;:} | ;
+attr         ::= NAME:n COLON INTP:i {:HashMap<String,Integer> m = new HashMap<String,Integer>();
+				 m.put(n,i);
+				 RESULT = m; :}
+
+ | attr:m COMA NAME:n COLON INTP:i {:m.put(n,i); RESULT=m;:}; 
+ltask        ::= task | ;
+task         ::= tas tas | task tas tas ;
+tas          ::= NAME:n ARROW NAME:m COLON{:HashMap hash = (HashMap)parser.st.get(n); Integer d = (Integer)hash.get(m); RESULT=d;:} lequ:l SYM {:System.out.println("minimum:"+l);:} ;
+lequ         ::= exp:e {:Integer c = (Integer)parser.stack(-1); System.out.println(c*e); RESULT=c*e; :}
+
+		 |lequ:l COMA exp:e {:Integer c = (Integer)parser.stack(-3); System.out.println(c*e);if(l<c*e) RESULT=l; else RESULT=c*e; :} ;
+exp          ::= | exp:v PLUS exp:w {: RESULT=v+w;:}
+                 | exp:v MINUS exp:w {: RESULT=v-w;:}
+                 | exp:v STAR exp:w {: RESULT=v*w;:}
+                 | exp:v DIV exp:w {: RESULT=v/w;:}
+                 | OP exp:e CP {:RESULT=e;:}
+                 | NAME:n ARROW NAME:m {:HashMap hash = (HashMap)parser.st.get(n); Integer d = (Integer)hash.get(m); RESULT=d;:}
+                 | INTP:i {:RESULT=i;:};
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

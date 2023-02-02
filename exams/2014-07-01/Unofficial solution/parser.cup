@@ -1,0 +1,134 @@
+import java_cup.runtime.*;
+import java.util.HashMap;
+import java.lang.Math;
+
+init with {:
+    st = new HashMap();
+
+    System.out.println("Achieved scores.\n");
+:};
+parser code
+{:
+	public static HashMap st;
+	public void syntax_error(Symbol simbolo_attuale)
+	{
+		StringBuffer m = new StringBuffer("Errore ");
+		if (cur_token.left != -1)
+		{
+			m.append("in linea " + (simbolo_attuale.left+1));
+			m.append(", colonna " + (simbolo_attuale.right+1));
+		}
+	m.append (", simbolo: " + (simbolo_attuale));
+	m.append (": Errore di sintassi");
+	
+	System.err.println(m);
+	}
+	public Object stack(int position)
+	{
+		return (((Symbol) stack.elementAt(tos+position)).value);
+	}
+:};
+
+terminal  TOKF,TOKS,SH,EXAM,SYM,COLON,COMA,IF,ELSE,ENDIF,THEN,AVG,MIN,MAX,LE,GE,AND,OR,PRINT,SCORES,OP,CP,DOT;
+terminal String NAME;
+terminal Integer INT;
+terminal Double FLOAT;
+
+non terminal prog,prog_ok,headerl,lexam,hc,hd,he,lcommands,commands,excom,ifcom,lprinta,lprintb,printa,printb ;
+non terminal HashMap lscores;
+non terminal Double exp;
+
+precedence left OR;
+precedence left AND;
+precedence left LE,GE;
+
+start with prog;
+
+prog         ::= prog_ok {: System.out.print("Syntax Correct\n"); :};
+prog_ok      ::= headerl SH lexam ;
+headerl      ::= TOKF hc | TOKS hd ;
+hc           ::= TOKF he| TOKS hc |TOKF ; 
+hd           ::= TOKS hd | TOKF hc ;
+he           ::= TOKS he | TOKS ; 
+lexam        ::= lcommands | ;
+lcommands    ::= commands commands commands | commands lcommands;
+commands     ::= excom | ifcom ;
+excom        ::= EXAM NAME:n SCORES COLON lscores:m SYM {:parser.st.put(n,m);:} ;
+lscores      ::= NAME INT:s {:HashMap<String,Double> m = new HashMap<String,Double>();
+				 m.put("min",s.doubleValue());
+				 m.put("max",s.doubleValue());
+				 m.put("avg",s.doubleValue());
+				 RESULT = m; :} 
+		|lscores:m COMA NAME INT:s {:Double i =(Double)m.get("min");
+					     if(i>s.doubleValue()){m.put("min",s.doubleValue());
+					     m.put("max",i);}
+					     else {m.put("max",s.doubleValue());} 
+					     double v=(s.doubleValue()+i)/2; m.put("avg",v);
+					     RESULT=m;	:} ;
+ifcom        ::= IF OP exp:e CP THEN lprinta ELSE lprintb ENDIF SYM | IF OP exp CP THEN lprinta ENDIF SYM;
+lprinta      ::= {:RESULT = (Double)parser.stack(-2);:}printa |lprinta {:RESULT = (Double)parser.stack(-3);:} printa ;
+printa       ::= PRINT NAME:n SYM {:Double e = (Double)parser.stack(-3);
+				  if(e==1.0){System.out.println(n);}:}
+               | PRINT NAME:n DOT AVG SYM {:Double e = (Double)parser.stack(-5);
+				  if(e==1.0){HashMap hash = (HashMap)parser.st.get(n); 
+				   Double d = (Double)hash.get("avg");
+				   System.out.println(d);}:} 
+              | PRINT NAME:n DOT MIN SYM {:Double e = (Double)parser.stack(-5);
+				  if(e==1.0){HashMap hash = (HashMap)parser.st.get(n); 
+				   Double d = (Double)hash.get("min");
+				   System.out.println(d);}:}  
+	      | PRINT NAME:n DOT MAX SYM {:Double e = (Double)parser.stack(-5);
+				  if(e==1.0){HashMap hash = (HashMap)parser.st.get(n); 
+				   Double d = (Double)hash.get("max");
+				   System.out.println(d);}:};
+lprintb      ::={:RESULT = (Double)parser.stack(-4);:} printb |lprintb {:RESULT = (Double)parser.stack(-5);:}printb ;
+printb       ::= PRINT NAME:n SYM {:Double e = (Double)parser.stack(-3);
+				  if(e==0.0){System.out.println(n);}:}
+               | PRINT NAME:n DOT AVG SYM {:Double e = (Double)parser.stack(-5);
+				  if(e==0.0){HashMap hash = (HashMap)parser.st.get(n); 
+				   Double d = (Double)hash.get("avg");
+				   System.out.println(d);}:} 
+              | PRINT NAME:n DOT MIN SYM {:Double e = (Double)parser.stack(-5);
+				  if(e==0.0){HashMap hash = (HashMap)parser.st.get(n); 
+				   Double d = (Double)hash.get("min");
+				   System.out.println(d);}:}  
+	      | PRINT NAME:n DOT MAX SYM {:Double e = (Double)parser.stack(-5);
+				  if(e==0.0){HashMap hash = (HashMap)parser.st.get(n); 
+				   Double d = (Double)hash.get("max");
+				   System.out.println(d);}:};
+exp          ::= exp:w AND exp:v{:if(w==1 && v==1) RESULT=1.0; else RESULT=0.0;:} 
+               | exp:w OR exp:v {:if(w==1|| v==1) RESULT=1.0; else RESULT=0.0; :}
+               | exp:w LE exp:v {:if(w<v) RESULT=1.0; else RESULT=0.0;:}      
+               | exp:w GE exp:v {:if(w>v) RESULT=1.0; else RESULT=0.0;:}
+	       | FLOAT:f {:RESULT=f;:}
+	       | NAME:n DOT AVG     {:HashMap hash = (HashMap)parser.st.get(n); 
+				   Double d = (Double)hash.get("avg");
+				   RESULT=d;:}
+	       | NAME:n DOT MIN   {:HashMap hash = (HashMap)parser.st.get(n); 
+				   Double d = (Double)hash.get("min");
+				   RESULT=d;:}
+	       | NAME:n DOT MAX {: HashMap hash = (HashMap)parser.st.get(n); 
+				   Double d = (Double)hash.get("max");
+				   RESULT=d;:} ;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

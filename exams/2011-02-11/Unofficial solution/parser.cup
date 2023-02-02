@@ -1,0 +1,96 @@
+import java_cup.runtime.*;
+import java.util.HashMap;
+
+init with {:
+    st = new HashMap();
+
+    System.out.println("Achieved scores.\n");
+:};
+parser code
+{:
+	public static int n=0;
+	public static HashMap st;
+	public void syntax_error(Symbol simbolo_attuale)
+	{
+		StringBuffer m = new StringBuffer("Errore ");
+		if (cur_token.left != -1)
+		{
+			m.append("in linea " + (simbolo_attuale.left+1));
+			m.append(", colonna " + (simbolo_attuale.right+1));
+		}
+	m.append (", simbolo: " + (simbolo_attuale));
+	m.append (": Errore di sintassi");
+	
+	System.err.println(m);
+	}
+	public Object stack(int position)
+	{
+		return (((Symbol) stack.elementAt(tos+position)).value);
+	}
+:};
+
+terminal DATE,CODEF,CODES,PUT,EQ,ADD,OP,CP,PLUS,MINUS,STAR,COMA,SH,NLINE;
+terminal Integer INT;
+non terminal prog,prog_ok,header,lang,headerf,headerd,hddd,headerdd,inst,p,e,a;
+non terminal Integer exp,off;
+
+precedence left PLUS, MINUS;
+precedence left STAR;
+
+start with prog;
+
+prog         ::= prog_ok {: System.out.print("Syntax Correct\n"); :};
+prog_ok      ::= header SH NLINE lang ;
+header       ::= CODEF NLINE headerf| DATE NLINE headerd |CODES NLINE headerd ;
+headerf      ::= CODEF NLINE hddd | DATE NLINE headerdd | CODES NLINE headerdd | CODEF NLINE ;
+headerd      ::= DATE NLINE headerd | CODES NLINE headerd | CODEF NLINE headerf | DATE NLINE | CODES NLINE ;
+headerdd     ::= DATE NLINE headerdd | CODES NLINE headerdd | CODEF NLINE hddd | DATE NLINE | CODES NLINE | CODEF NLINE ;
+hddd         ::= DATE NLINE hddd | CODES NLINE hddd | DATE NLINE | CODES NLINE   ; 
+lang         ::= inst inst inst | inst inst lang ;
+inst         ::= p | e | a ;
+p            ::= PUT OP exp:v CP NLINE {:parser.n=parser.n+1;
+				       	parser.st.put(parser.n,v);
+                                        System.out.println(v+" ");:} ;
+e            ::= EQ OP exp:v CP NLINE {:parser.n=parser.n+1;
+				       	parser.st.put(parser.n,0);
+                                        System.out.println(0);:}
+                |EQ OP exp:v CP COMA exp:r NLINE {:parser.n=parser.n+1;
+				       	if(v!=r){parser.st.put(parser.n,v);
+                                        System.out.println(v+" ");}
+				        else{
+					parser.st.put(parser.n,r);
+                                        System.out.println(r+" ");}:};
+a            ::= ADD NLINE            {:parser.n=parser.n+1;
+		                        parser.st.put(parser.n,0);
+                                        System.out.println(0);:}  
+		|ADD OP exp:v CP COMA off:o {:parser.n=parser.n+1;
+		                              parser.st.put(parser.n,o+v);
+                                              System.out.println(o+v);:}  
+		| ADD MINUS INT:i COMA off:o ; {:Integer dur=new Integer((parser.n-i)+1);
+                                         Integer am = (Integer)parser.st.get(dur); System.out.println(o+am);
+					 parser.n=parser.n+1;parser.st.put(parser.n,o+am); :}
+off          ::= OP exp:v CP NLINE     {:RESULT=v;:}
+		| MINUS INT:i NLINE    {:Integer dur=new Integer((parser.n-i)+1);
+                                         Integer am = (Integer)parser.st.get(dur);
+                                         RESULT=am; :}  
+		| OP exp:v CP COMA off:o {:RESULT=v+o;:} 
+		| MINUS INT:i COMA off:o {:Integer dur=new Integer((parser.n-i)+1);
+                                           Integer am = (Integer)parser.st.get(dur);
+                                           RESULT=am+o;:} ;
+exp          ::= exp:v PLUS exp:u     {:RESULT= v+u;:}
+		| exp:v MINUS exp:u   {:RESULT= v-u;:}
+		| exp:v STAR exp:u    {:RESULT= v*u;:}
+		| OP exp:v CP         {:RESULT= v;:}       
+		| INT:i               {:RESULT=i;:} ;
+
+
+
+
+
+
+
+
+
+
+
+

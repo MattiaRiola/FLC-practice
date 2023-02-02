@@ -1,0 +1,146 @@
+import java.io.*;
+import java_cup.runtime.*;
+import java.util.HashMap;
+import java.util.List;
+import java.util.LinkedList;
+
+init with {:
+    symbol_table = new HashMap<String, HashMap<String, Integer>>();
+:};
+
+parser code {:
+    public HashMap<String, HashMap<String, Integer>> symbol_table;
+
+    public static void main(String argv[]){
+	try {
+        /* Scanner instantiation */
+        scanner l = new scanner(new FileReader(argv[0]));
+        /* Parser instantiation */
+        parser p = new parser(l);
+        /* Run the parser */
+        Object result = p.parse().value;      
+      } catch (NullPointerException e) {
+        e.printStackTrace();
+              System.err.println("Syntax error");
+      } catch (FileNotFoundException e){
+              System.err.println("Errore opening file " + argv[0]);
+      } catch (Exception e){
+              e.printStackTrace();
+      }
+    }
+  
+    // Redefinition of error functions
+    public void report_error(String message, Object info) {
+        System.err.print("ERROR: Syntax error");
+        if (info instanceof Symbol) {
+            if (((Symbol)info).left != -1) {
+                int line = (((Symbol)info).left) + 1;
+                int column = (((Symbol)info).right) + 1;
+                System.err.print(" (row " + line + ", column " + column + "): " + message);
+            } else System.err.print(": " + message);
+        }
+        else System.err.print(": " + message);
+    }
+    public void syntax_error(Symbol cur_token) { }
+
+    // Return actual symbol
+    /* It returns the object of type Symbol in the top of the parser stack.
+    */
+    public Symbol getToken() {
+        return ((Symbol)stack.elementAt(tos));
+    }
+    
+    // Return semantic value of symbol in position (position)
+    public Object stack(int position) {
+        return (((Symbol)stack.elementAt(tos + position)).value);
+    }
+:};
+
+// Terminal tokens
+terminal SEP;
+terminal CODE, DATE;
+terminal S, C, CM, DOT, BO, BC;
+terminal START, VAR, MOVE, WHEN, THEN, DONE;
+terminal AND, OR, NOT, EQ, NEQ;
+terminal String ID, INT, COORD;
+
+
+// Non Terminal tokens
+non terminal file;
+non terminal header, cod;
+non terminal st;
+non terminal Integer coordinate;
+non terminal Integer[] coordinates;
+non terminal commands, command;
+non terminal var;
+non terminal HashMap attribute, attributes;
+non terminal Integer vattr, offset;
+non terminal move, moves, when;
+non terminal Boolean bool;
+
+// Precedences and associativities
+// lower precedences
+precedence left AND;
+precedence left OR;
+precedence left NOT;
+// higher precedences
+
+//////////////////////////////////////
+// Grammar start
+//////////////////////////////////////
+
+start with file;
+
+file ::= header SEP st;
+
+header ::= cod DATE S cod | cod;
+cod ::= | CODE S cod;
+
+coordinate ::= COORD:a {: RESULT = Integer.parseInt(a); :};
+
+st ::= START coordinates:a S {: RESULT = a; :} commands;
+coordinates ::= coordinate:x CM coordinate:y CM coordinate:z {: RESULT = new Integer[] { x, y, z }; :};
+
+commands ::= | commands {: RESULT = parser.stack(0); :} command;
+command ::= var S | {: RESULT = 1; :} move S | when S;
+
+var ::= VAR BO attributes:a BC ID:b {: parser.symbol_table.put(b, a); :};
+attributes ::= attributes:a CM attributes:b {:
+                 RESULT = new HashMap<String, Integer>();
+                 RESULT.putAll(a);
+                 RESULT.putAll(b);
+               :} | attribute:a CM attribute:b CM attribute:c {:
+                 RESULT = new HashMap<String, Integer>();
+                 RESULT.putAll(a);
+                 RESULT.putAll(b);
+                 RESULT.putAll(c);
+               :};
+attribute ::= ID:a C coordinate:b {: RESULT = new HashMap<String, Integer>(); RESULT.put(a,b); :};
+
+vattr ::= ID:a DOT ID:b {: RESULT = parser.symbol_table.get(a).get(b); :};
+
+move ::= MOVE offset:a CM offset:b CM offset:c {:
+           Integer val = (Integer)parser.stack(-6);
+           boolean exec = val == 1 || val == 2 || val == 3;
+           Integer[] pos;
+           if (val == 1) pos = (Integer[])parser.stack(-9);
+           else if (val == 2) pos = (Integer[])parser.stack(-13);
+           else pos = (Integer[])parser.stack(-14);
+           if (exec) {
+               pos[0] += a;
+               pos[1] += b;
+               pos[2] += c;
+               System.out.println("X="+pos[0]+" Y="+pos[1]+", Z="+pos[2]); 
+           }
+         :};
+offset ::= coordinate:a {: RESULT = a; :} | vattr:a {: RESULT = a; :};
+
+when ::= WHEN bool THEN {: RESULT = (parser.stack(-3)); :} moves DONE;
+bool ::= bool:a AND bool:b {: RESULT = a && b; :} |
+         bool:a OR bool:b {: RESULT = a || b; :} |
+         NOT bool:a {: RESULT = !a; :} |
+         offset:a EQ offset:b {: RESULT = a == b; :} |
+         offset:a NEQ offset:b {: RESULT = a != b; :};
+
+moves ::= moves {: RESULT = ((Boolean)parser.stack(-3)) ? 3: 0; :} move S |
+          {: RESULT = ((Boolean)parser.stack(-2)) ? 2: 0; :} move S;

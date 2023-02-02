@@ -1,0 +1,189 @@
+import java_cup.runtime.*;
+import java.math.*;
+import java.io.*;
+import java.util.*;
+
+init with {:
+    map = new HashMap();
+
+	System.out.println("Output:");
+:}
+
+parser code {:
+    HashMap map;
+    
+    public void syntax_error(Symbol current_symbol) {
+      StringBuffer m = new StringBuffer("Error");
+
+      if (current_symbol.left != -1) {                
+        m.append(" in line " + (current_symbol.left+1));   
+        m.append(", column " + (current_symbol.right+1));
+      }
+      m.append(", symbol: " + (current_symbol));
+      m.append(" : Syntax Error");
+   
+      System.err.println(m);
+    } 
+
+    /* Return semantic value of symbol in position (position) */
+    public Object stack(int position) {
+      return (((Symbol)stack.elementAt(tos + position)).value);
+    }
+:};
+
+action code {:
+	public static void p(Object o) {
+		System.out.print(o);
+	}
+	public static void pln(Object o) {
+		System.out.println(o);
+	}
+
+	class MyObj {
+	    private String attr_name;
+	    private Integer attr_value;
+	    
+	    MyObj(String attr_name, Integer attr_value){
+	        this.attr_name = attr_name;
+	        this.attr_value = attr_value;
+	    }
+
+	    String getName(){
+	        return this.attr_name;
+	    }
+	    Integer getValue(){
+	        return this.attr_value;
+	    }
+	};
+:};
+
+
+//terminal tokens
+terminal RO, RC, SO, SC, SEMICOLON, COMMA, SEPARATOR;
+terminal AND, OR, NOT, EQ, EQEQ, PLUS, STAR;
+terminal ID, NUM, EVALUATE, CASE_TRUE, CASE_FALSE, SAVE, O;
+terminal TOKEN1, TOKEN2, TOKEN3, TRUE, FALSE;
+
+// Non terminal tokens
+non terminal file, header_section, program_section, E, F, G, t1, t2, t3;
+non terminal instruction_list, instruction, eval_instruction, case_instruction, save_instruction;
+non terminal Boolean bool_expr;
+non terminal Integer num_expr, offset;
+non terminal assignment_list, assignment; 
+
+precedence left OR;
+precedence left AND;
+precedence right NOT;
+precedence left PLUS;
+precedence left STAR;
+
+//GRAMMAR START
+start with file;
+
+file ::= header_section SEPARATOR program_section
+;
+
+/* header section */
+
+header_section ::= E;
+E ::= t1 E | t2 E | t3 F ;
+F ::= t1 F | t2 F | t3 G | G ;
+G ::= t1 G | t2 G | t1 | t2 | t3;
+
+t1 ::= TOKEN1 SEMICOLON ;
+t2 ::= TOKEN2 SEMICOLON ;
+t3 ::= TOKEN3 SEMICOLON ;
+
+/* program section */
+
+program_section ::= instruction_list
+;
+
+instruction_list ::= instruction instruction instruction instruction
+					| instruction instruction instruction_list
+;
+
+instruction ::= eval_instruction:x SEMICOLON {: RESULT = x; :}
+			  | case_instruction:x SEMICOLON {: RESULT = x; :}
+			  | save_instruction:x SEMICOLON {: RESULT = x; :}
+;
+
+bool_expr ::= RO bool_expr:e RC {:
+				RESULT = e;
+			:}
+			| bool_expr:e1 AND bool_expr:e2 {:
+				RESULT = (Boolean)e1 && (Boolean)e2;
+			:}
+			| bool_expr:e1 OR bool_expr:e2 {:
+				RESULT = (Boolean)e1 || (Boolean)e2;
+			:}
+			| NOT bool_expr:e1 {:
+				RESULT = !((Boolean)e1);
+			:}
+			| num_expr:e1 EQEQ num_expr:e2 {:
+				RESULT = e1.equals(e2);
+			:}
+			| TRUE {:
+				RESULT = true;
+			:}
+			| FALSE {:
+				RESULT = false;
+			:}
+			| ID:x {:
+				RESULT = (Boolean)parser.map.get(x);
+			:}
+;
+
+num_expr ::= RO num_expr:e RC {:
+				RESULT = (Integer)e;
+			:}
+		   	| num_expr:e1 PLUS num_expr:e2 {:
+				RESULT = (Integer)e1 + (Integer)e2;
+			:}
+			| num_expr:e1 STAR num_expr:e2 {:
+				RESULT = (Integer)e1 * (Integer)e2;
+			:}  
+			| NUM:x {:
+				RESULT = (Integer)x;
+			:}
+;
+
+eval_instruction ::= EVALUATE bool_expr:x {:
+		pln((Boolean)x?"true":"false");
+		RESULT = x;
+	:}
+;
+
+case_instruction ::= CASE_TRUE bool_expr:e1 COMMA CASE_FALSE bool_expr:e2 {:
+		Boolean prev = (Boolean)parser.stack(-5);
+		if(prev){
+			pln((Boolean)e1?"true":"false");
+			RESULT = e1;
+		}
+		else{
+			pln((Boolean)e2?"true":"false");
+			RESULT = e2;
+		}
+	:}
+;
+
+save_instruction ::= SAVE assignment_list {:
+		pln("false");
+		RESULT = false;
+	:}
+;
+
+assignment_list ::= assignment | assignment_list COMMA assignment
+;
+
+assignment ::= ID:x EQ bool_expr:y {:
+				parser.map.put(x, y);
+			:}
+			 | ID:x EQ offset:y {:
+			 	parser.map.put(x, parser.stack((Integer)y - 4));
+			 :}
+;
+
+offset ::= O SO NUM:n SC {: RESULT = (Integer)n; :}
+;
+

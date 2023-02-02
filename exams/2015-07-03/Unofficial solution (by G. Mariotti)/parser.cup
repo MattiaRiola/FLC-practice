@@ -1,0 +1,334 @@
+import java_cup.runtime.*;
+import java.util.*;
+import java.io.*;
+
+init with 		{:
+
+:};
+
+parser code 	{:
+	
+	public void report_error(String message, Object info) {
+		StringBuffer m = new StringBuffer(message);
+		if (info instanceof Symbol) {
+			if (((Symbol)info).left != 1 && ((Symbol)info).right != 1) {
+				if (((Symbol)info).left != -1 && ((Symbol)info).right != -1) {
+					int line = (((Symbol)info).left) + 1;
+					int column = (((Symbol)info).right) + 1;
+					m.append(" (line " + line + " column " + column + ")");
+				}
+			}
+			System.err.println(m);
+		}
+	}
+	
+	public Object stack(int position) {
+		return (((Symbol)stack.elementAt(tos + position)).value);
+	}
+	
+:};
+
+action code 	{:
+
+	class OxCel {
+		private int oxygen;
+		private int cells;
+		
+		public int getOxygen() {
+			return oxygen;
+		}
+		
+		public int getCells() {
+			return cells;
+		}
+		
+		public void setOxygen(int oxygen) {
+			this.oxygen = oxygen;
+		}
+		
+		public void setCells(int cells) {
+			this.cells = cells;
+		}
+	}
+	
+	class Parameter {
+		private String param;
+		private int value;
+		
+		public String getParam() {
+			return param;
+		}
+		
+		public void setParam(String param) {
+			this.param = param;
+		}
+		
+		public int getValue() {
+			return value;
+		}
+		
+		public void setValue(int value) {
+			this.value = value;
+		}
+	}
+	
+	class TempFood {
+		private float temp;
+		private float food;
+		
+		public float getTemp() {
+			return temp;
+		}
+		
+		public void setTemp(float temp) {
+			this.temp = temp;
+		}
+		
+		public float getFood() {
+			return food;
+		}
+		
+		public void setFood(float food) {
+			this.food = food;
+		}
+	}
+
+:};
+
+//////////////////////////////////
+///// SYMBOLS DECLARATION
+/////////////////////////////////
+
+terminal CODE1, CODE2, SEPAR;
+terminal CM, SCO, COL, RO, RC;
+terminal PLUS, MINUS;
+
+terminal MOD_ST1, MOD_ST2, MAX, TEMP, FOOD;
+terminal Integer OXYG, CELLS, UINT;
+terminal Float FLOAT;
+
+non terminal prog, prog_ok, descr, simulat, code1l, code2l, code1l1;
+non terminal OxCel initial, commands, command, mod_state1, mod_state2;
+non terminal Parameter param;
+non terminal TempFood NTO, NT1;
+
+non terminal String oper;
+non terminal Integer list_val, max_f, val;
+non terminal Float temp, food, list_var, var_att;
+
+precedence left PLUS, MINUS;
+
+//////////////////////////////////
+///// GRAMMAR
+/////////////////////////////////
+
+start with prog;
+
+prog 	::= prog_ok 	{: System.out.println("Syntax is correct"); :}
+	| error 			{: parser.report_error("Error", null); :}
+;
+
+prog_ok ::= descr SEPAR simulat
+;
+
+descr 	::= code1l code2l
+		| CODE2 SCO code1l1 CODE2 SCO code1l1
+;
+
+code1l 	::= CODE1 SCO CODE1 SCO CODE1 SCO | code1l CODE1 SCO CODE1 SCO
+;
+
+code2l 	::= CODE2 SCO CODE2 SCO | CODE2 SCO CODE2 SCO CODE2 SCO
+		| CODE2 SCO CODE2 SCO CODE2 SCO CODE2 SCO CODE2 SCO
+;
+
+code1l1 ::= | code1l1 CODE1 SCO
+;
+
+simulat ::= initial commands
+;
+
+initial ::= OXYG UINT:x SCO CELLS UINT:y SCO
+				{:
+					RESULT = new OxCel();
+					RESULT.setOxygen(x);
+					RESULT.setCells(y);
+				:}
+		| CELLS UINT:y SCO OXYG UINT:x SCO
+				{:
+					RESULT = new OxCel();
+					RESULT.setOxygen(x);
+					RESULT.setCells(y);
+				:}
+;
+
+commands ::= 	{: 
+					RESULT = (OxCel)parser.stack(0);
+				:}
+		| commands command:x {: RESULT = x; :}
+;
+
+command  ::= mod_state1:x SCO 
+				{: 
+					RESULT = x; 
+					System.out.println("oxygen=" + x.getOxygen() + " cells=" + x.getCells());
+				:} 
+		| mod_state2:x SCO 
+				{: 
+					RESULT = x; 
+					System.out.println("oxygen=" + x.getOxygen() + " cells=" + x.getCells());
+				:}
+;
+
+mod_state1 ::= MOD_ST1 OXYG oper:x max_f:val
+				{:
+					OxCel value = (OxCel)parser.stack(-4);
+					Integer oxyg = value.getOxygen();
+					switch ((String)x) {
+						case "+":
+							oxyg += val;
+							break;
+						case "-":
+							oxyg -= val;
+							break;
+					}
+					RESULT = new OxCel();
+					RESULT.setOxygen(oxyg);
+					RESULT.setCells(value.getCells());
+				:}
+			| MOD_ST1 CELLS oper:x max_f:val
+				{:
+					OxCel value = (OxCel)parser.stack(-4);
+					Integer cells = value.getCells();
+					switch ((String)x) {
+						case "+":
+							cells += val;
+							break;
+						case "-":
+							cells -= val;
+							break;
+					}
+					RESULT = new OxCel();
+					RESULT.setCells(cells);
+					RESULT.setOxygen(value.getOxygen());
+				:}
+;
+
+oper 	::= PLUS {: RESULT = new String("+"); :}
+		| MINUS {: RESULT = new String("-"); :}
+;
+
+max_f 	::= MAX RO list_val:x RC {: RESULT = x; :}
+;
+
+list_val ::= val:x {: RESULT = x; :}
+		| list_val:x CM val:y {: RESULT = x > y ? x : y; :}
+		| list_val:x CM max_f:y {: RESULT = x > y ? x : y; :}
+		| MAX RO list_val:x CM val:y RC {: RESULT = x > y ? x : y; :}
+;
+
+val 	::= UINT:x {: RESULT = x; :}
+;
+
+mod_state2 ::= MOD_ST2 temp food param:p COL NTO list_var:x
+		{:
+			OxCel value = (OxCel)parser.stack(-7);
+			RESULT = new OxCel();
+			switch(p.getParam()) {
+				case "OXYGEN":
+					RESULT.setOxygen(p.getValue() + new Integer((int)x.floatValue()));
+					RESULT.setCells(value.getCells());
+					break;
+				case "CELLS":
+					RESULT.setCells(p.getValue() + new Integer((int)x.floatValue()));
+					RESULT.setOxygen(value.getOxygen());
+					break;
+			}
+		:}
+;
+
+temp 	::= TEMP FLOAT:x {: RESULT = x; :}
+;
+
+food 	::= FOOD FLOAT:x {: RESULT = x; :}
+;
+
+param 	::= OXYG
+			{: 
+				OxCel value = (OxCel)parser.stack(-4);
+				RESULT = new Parameter();
+				RESULT.setParam("OXYGEN");
+				RESULT.setValue(value.getOxygen());
+			:}
+		| CELLS
+			{: 
+				OxCel value = (OxCel)parser.stack(-4);
+				RESULT = new Parameter();
+				RESULT.setParam("CELLS");
+				RESULT.setValue(value.getCells());
+			:}
+;
+
+NTO 	::= {:
+				RESULT = new TempFood();
+				RESULT.setTemp((Float) parser.stack(-3)); // Temp
+				RESULT.setFood((Float) parser.stack(-2)); // Food
+			:}
+;
+
+list_var ::= var_att:x {: RESULT = (Float)x; :}
+		| list_var:x CM NT1 var_att:y {: RESULT = (Float)x + (Float)y; :}
+;
+
+NT1 	::= {:
+				RESULT = (TempFood)parser.stack(-2);
+			:}
+;
+
+var_att ::= oper:x UINT:u TEMP
+			{:
+				Float temp = new Float(0);
+				TempFood value = (TempFood)parser.stack(-3);
+				switch((String) x) {
+					case "+":
+						temp = u * value.getTemp();
+						break;
+					case "-":
+						temp = - u * value.getTemp();
+						break;
+				}
+				RESULT = temp;
+			:}
+		| oper:x UINT:u FOOD
+			{:
+				Float food = new Float(0);
+				TempFood value = (TempFood)parser.stack(-3);
+				switch(x) {
+					case "+":
+						food = u * value.getFood();
+						break;
+					case "-":
+						food = - u * value.getFood();
+						break;
+				}
+				RESULT = food;
+			:}
+;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

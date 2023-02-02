@@ -1,0 +1,185 @@
+import java.io.*;
+import java_cup.runtime.*;
+import java.util.HashMap;
+import java.util.List;
+import java.util.LinkedList;
+
+init with {:
+    symbol_table = new HashMap<String, HashMap<String, Integer>>();
+:};
+
+parser code {:
+    public HashMap<String, HashMap<String, Integer>> symbol_table;
+
+    public static void main(String argv[]){
+	try {
+        /* Scanner instantiation */
+        scanner l = new scanner(new FileReader(argv[0]));
+        /* Parser instantiation */
+        parser p = new parser(l);
+        /* Run the parser */
+        Object result = p.parse().value;      
+      } catch (NullPointerException e) {
+        e.printStackTrace();
+              System.err.println("Syntax error");
+      } catch (FileNotFoundException e){
+              System.err.println("Errore opening file " + argv[0]);
+      } catch (Exception e){
+              e.printStackTrace();
+      }
+    }
+  
+    // Redefinition of error functions
+    public void report_error(String message, Object info) {
+        System.err.print("ERROR: Syntax error");
+        if (info instanceof Symbol) {
+            if (((Symbol)info).left != -1) {
+                int line = (((Symbol)info).left) + 1;
+                int column = (((Symbol)info).right) + 1;
+                System.err.print(" (row " + line + ", column " + column + "): " + message);
+            } else System.err.print(": " + message);
+        }
+        else System.err.print(": " + message);
+    }
+    public void syntax_error(Symbol cur_token) { }
+
+    // Return actual symbol
+    /* It returns the object of type Symbol in the top of the parser stack.
+    */
+    public Symbol getToken() {
+        return ((Symbol)stack.elementAt(tos));
+    }
+    
+    // Return semantic value of symbol in position (position)
+    public Object stack(int position) {
+        return (((Symbol)stack.elementAt(tos + position)).value);
+    }
+:};
+
+
+// Terminal tokens
+terminal SEP;
+terminal T1, T2, T3;
+terminal String ID, INT;
+terminal String QUOTED;
+terminal RO, RC, BO, BC;
+terminal EQ, NOT, AND, OR;
+terminal S, PT;
+terminal START, STATE, IF, FI, DO, CASE, DONE, PRINT, NEW;
+
+
+// Non Terminal tokens
+non terminal file, header, declarations, state;
+non terminal t3;
+non terminal String attributes;
+non terminal attribute, declaration, odd_declaration;
+non terminal Boolean boolean;
+non terminal Integer data, expr;
+non terminal String new_state;
+non terminal assign, print, commands;
+non terminal String ifs;
+non terminal case, cases, if;
+
+// Precedences and associativities
+// lower precedences
+precedence left EQ;
+precedence left OR;
+precedence left AND;
+precedence left NOT;
+// higher precedences
+
+//////////////////////////////////////
+// Grammar start
+//////////////////////////////////////
+
+start with file;
+
+t3 ::= | T3 t3;
+
+header ::= t3 T1 t3 T2 t3 T2 t3 | t3 T2 t3 T1 t3 T2 t3 | t3 T2 t3 T2 t3 T1 t3;
+
+attribute ::= ID:f EQ INT:v S {:
+                String varname = (String) parser.stack(-4);
+                HashMap<String, Integer> var = parser.symbol_table.get(varname);
+                Integer value = Integer.parseInt(v);
+                var.put(f, value);
+              :};
+
+attributes ::= | attributes {:
+                 RESULT = (String) parser.stack(-5);
+               :} attribute;
+
+declaration  ::= ID:v {: parser.symbol_table.put(v, new HashMap<String, Integer>()); :} EQ ID BO attributes BC S {:
+                   Integer max = 0;
+                   Integer min = Integer.MAX_VALUE;
+                   HashMap<String, Integer> var = parser.symbol_table.get(v);
+                   for (Integer f: var.values()) {
+                     if (f < min) min = f;
+                     if (f > max) max = f;
+                   }
+                   System.out.println("Min: " + min + " Max: " + max);
+                 :};
+
+odd_declaration ::= | declaration declaration odd_declaration;
+
+declarations ::= | declaration declaration declaration odd_declaration;
+
+expr ::= data:a {: RESULT = a; :} | INT:a {: RESULT = Integer.parseInt(a); :};
+
+boolean ::= boolean:a AND boolean:b {: RESULT = a && b; :} |
+            boolean:a OR boolean:b {: RESULT = a || b; :} |
+            NOT boolean:a {: RESULT = !a; :} |
+            boolean:a EQ EQ boolean:b {: RESULT = a == b; :} |
+            expr:a EQ EQ expr:b {: RESULT = a == b; :} |
+            boolean:a NOT EQ boolean:b {: RESULT = a != b; :} |
+            expr:a NOT EQ expr:b {: RESULT = a != b; :} |
+            RO boolean:a RC {: RESULT = a; :};
+
+data ::= ID:v PT ID:f {: RESULT = parser.symbol_table.get(v).get(f); :};
+
+assign ::= ID:v PT ID:f EQ data:n S {:
+             Boolean exec = (Boolean) parser.stack(-6);
+             if (exec) {
+               HashMap<String, Integer> variable = parser.symbol_table.get(v);
+               variable.put(f, n);
+             }
+           :};
+
+print ::= PRINT QUOTED:a S {:
+            Boolean exec = (Boolean) parser.stack(-3);
+            if (exec) System.out.println(a);
+          :};
+
+new_state ::= NEW STATE ID:a S {: RESULT = a; :};
+
+commands ::= | commands {: RESULT = parser.stack(-1); :} assign | commands {: RESULT = parser.stack(-1); :} print;
+
+case ::= CASE boolean:a DO {: 
+           String[] state = (String[]) parser.stack(-3);
+           Boolean exec = state[0].equals(state[1]) && a;
+           RESULT = exec;
+         :} commands new_state:s {: 
+           Boolean exec = (Boolean) parser.stack(-2);
+           if (exec) {
+             String[] state = (String[]) parser.stack(-6);
+             state[0] = s;
+           }
+         :}
+         DONE;
+
+cases ::= | cases {:
+            RESULT = parser.stack(-1);
+          :} case;
+
+if ::= IF STATE ID:a {: 
+          String s = (String) parser.stack(-3);
+          String[] state = new String[] { s, a };
+          RESULT = state;
+        :} cases FI {: RESULT = ((String[])parser.stack(-2))[0]; :};
+
+ifs ::= ifs:a {: RESULT = a; :} if | {: RESULT = (String) parser.stack(0); :} if:a {: RESULT = (String)a; :};
+
+state ::= START STATE ID:a S {: RESULT = a; :} ifs;
+
+file ::= header SEP declarations SEP state;
+

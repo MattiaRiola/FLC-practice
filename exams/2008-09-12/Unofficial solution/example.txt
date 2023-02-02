@@ -1,0 +1,9 @@
+cheese 3.00 euro/hg ;
+HAM 2.00 euro/hg ;
+HAM_deluxe 4.00 euro/hg ;
+Bread 1.50 euro/hg ;
+%%
+date: (12:00) 2008.06.06 ;
+2 people : Group1 : 4 hg HAM_deluxe, 6 hg Bread , 4 hg cheese;
+2 people : Group_2 : 8 hg Bread, 6 hg cheese;
+4 people : GR3 : 10 hg HAM, 7 hg cheese, 11 hg Bread;

@@ -1,0 +1,152 @@
+/*** SETUP SECTION ***/
+// Contains all the directives needed for the parser, usually includes the cup library and
+// others. User code can also be defined in this section
+import java_cup.runtime.*;
+import java.io.InputStreamReader;
+import java.util.HashMap;
+import java.util.Vector;
+  
+
+init with {:
+  points = new HashMap<String, Point>();
+:};
+
+
+parser code {:
+  HashMap<String, Point> points;
+
+  public void syntax_error(Symbol current_symbol) {
+    StringBuffer m = new StringBuffer("Error");
+
+    if (current_symbol.left != -1) {                
+      m.append(" in line " + (current_symbol.left+1));   
+      m.append(", column " + (current_symbol.right+1));
+    }
+    m.append(", symbol: " + (current_symbol));
+    m.append(" : Syntax Error");
+
+    System.err.println(m);
+  }
+
+  public Object stack ( int position){
+    // returns the object at the specified position
+    // from the top (tos) of the stack
+    return(((Symbol)stack.elementAt(tos+position)).value);
+  }
+:};
+
+action code {:
+  
+:}
+
+/*** TERMINAL AND NON-TERMINAL SECTION ***/
+// Contains the definition of grammar start symbol, its terminal symbols (wich are passed from 
+// Jflex) and its non terminal symbols.
+terminal SC, HOUR, CODEROW, SEP, LSB, RSB, EQ, CM, CL, ZSTAT, LRB, RRB, WHEN, IS, PRINT, AND, OR, NOT, DT, GT, LS;
+terminal Point POINTNAME;
+terminal double REAL;
+terminal String ATTNAME, QUOTEDSTRING;
+terminal boolean CVAL;
+non terminal INPUT, START, PROGRAM, CMDLI, CMD, E_PATTLI, PATTLI, CONDITIONS, COND, PRINTLI, PRINTCMD, E_HOURS, HOURS;
+non terminal Object PATT;
+non terminal Stat POINTNAMELI;
+non terminal Boolean BOOLEXP, SBOOL;
+non terminal Double OP;
+
+/*** PRECEDENCES SECTION ***/
+precedence left OR;
+precedence left AND;
+precedence left NOT;
+
+start with INPUT;
+
+/*** RULES SECTION ***/
+// Contains all productions, to wich can also be assigned an action
+INPUT ::= START SEP PROGRAM ;
+
+START ::= E_HOURS CODEROW SC E_HOURS CODEROW SC E_HOURS;
+
+E_HOURS ::= HOURS | ;
+
+HOURS ::= HOURS HOUR SC | HOUR SC ;
+
+PROGRAM ::= CMDLI | ;
+
+CMDLI ::= CMDLI CMD SC CMD SC | CMD SC ;
+
+CMD ::= POINTNAME:point EQ LSB E_PATTLI RSB {:
+		parser.points.put(point.name, point);
+	  :}
+	  | ZSTAT LRB POINTNAMELI:stat RRB {:
+	  	stat.avg /= stat.count;
+	  	System.out.println("MIN: " + stat.min + "MAX: " + stat.max + "AVG: " + stat.avg);
+	  :}
+	  | WHEN BOOLEXP CONDITIONS ;
+
+E_PATTLI ::= PATTLI | ;
+
+PATTLI ::= PATTLI CM {: RESULT = parser.stack(-4); :} PATT | {: RESULT = parser.stack(-2); :} PATT ;
+
+PATT ::= ATTNAME:name CL REAL:val {:
+		 Point p = (Point) parser.stack(-3);
+		 
+		 if (name.equals("x"))
+		 	p.x = val;
+		 if (name.equals("y"))
+		 	p.y = val;
+		 if (name.equals("z"))
+		 	p.z = val;
+	   :} ;
+
+POINTNAMELI ::= POINTNAMELI:stat CM POINTNAME:name {:
+			  		Point p = parser.points.get(name.name);
+					
+					if (stat.min > p.z)
+						stat.min = p.z;
+					if (stat.max < p.z)
+						stat.max = p.z;
+					stat.avg += p.z;
+					stat.count++;
+					
+					RESULT = stat;
+				:}
+			  | POINTNAME:name {:
+			  		Point p = parser.points.get(name.name);
+			  		
+			  		RESULT = new Stat();
+			  		RESULT.min = p.z;
+			  		RESULT.max = p.z;
+			  		RESULT.avg = p.z;
+			  		RESULT.count = 1;
+				:};
+				
+BOOLEXP ::= NOT BOOLEXP:v {: RESULT = new Boolean(!v.booleanValue()); :} 
+	| BOOLEXP:v1 AND BOOLEXP:v2 {: RESULT = new Boolean(v1.booleanValue() && v2.booleanValue()); :}
+	| BOOLEXP:v1 OR BOOLEXP:v2 {: RESULT = new Boolean(v1.booleanValue() || v2.booleanValue()); :}
+	| SBOOL:v {: RESULT = new Boolean(v); :} ;
+
+SBOOL ::= OP:v1 GT OP:v2 {: RESULT = v1.doubleValue() > v2.doubleValue(); :} 
+	| OP:v1 LS OP:v2 {: RESULT = v1.doubleValue() < v2.doubleValue(); :} ;
+
+OP ::= REAL:val {: RESULT = new Double(val); :} | POINTNAME:point DT ATTNAME:att {:
+		Point p = parser.points.get(point.name);
+
+		if (att.equals("x"))
+			RESULT = new Double(p.x);
+		if (att.equals("y"))
+			RESULT = new Double(p.y);
+		if (att.equals("z"))
+			RESULT = new Double(p.z);
+	:} ;
+
+CONDITIONS ::= CONDITIONS {: RESULT = parser.stack(-1); :} COND | COND ;
+
+COND ::= IS CVAL PRINTLI ;
+
+PRINTLI ::= PRINTLI {: RESULT = parser.stack(-3); :} PRINTCMD | PRINTCMD ;
+
+PRINTCMD ::= PRINT QUOTEDSTRING:testo SC {:
+		//System.out.println("EVALUATING: " + (boolean) parser.stack(-5) + ", " + ((boolean) parser.stack(-3)) + " before printing " + testo);
+		if (((boolean) parser.stack(-3)) == ((boolean) parser.stack(-5)))
+			System.out.println(testo);
+	:};

@@ -1,0 +1,187 @@
+import java_cup.runtime.*;
+import java.math.*;
+import java.io.*;
+import java.util.*;
+
+init with {:
+    map = new HashMap<String, HashMap<String, Integer>>();
+
+	System.out.println("Output:");
+:}
+
+parser code {:
+    HashMap<String, HashMap<String, Integer>> map;
+    
+    public void syntax_error(Symbol current_symbol) {
+      StringBuffer m = new StringBuffer("Error");
+
+      if (current_symbol.left != -1) {                
+        m.append(" in line " + (current_symbol.left+1));   
+        m.append(", column " + (current_symbol.right+1));
+      }
+      m.append(", symbol: " + (current_symbol));
+      m.append(" : Syntax Error");
+   
+      System.err.println(m);
+    } 
+
+    /* Return semantic value of symbol in position (position) */
+    public Object stack(int position) {
+      return (((Symbol)stack.elementAt(tos + position)).value);
+    }
+:};
+
+action code {:
+	public static void p(Object o) {
+		System.out.print(o);
+	}
+	public static void pln(Object o) {
+		System.out.println(o);
+	}
+
+	class MyObj {
+	    private String attr_name;
+	    private Integer attr_value;
+	    
+	    MyObj(String attr_name, Integer attr_value){
+	        this.attr_name = attr_name;
+	        this.attr_value = attr_value;
+	    }
+
+	    String getName(){
+	        return this.attr_name;
+	    }
+	    Integer getValue(){
+	        return this.attr_value;
+	    }
+	};
+:};
+
+
+//terminal tokens
+terminal DOT, AND, OR, EQEQ, EQ, SEMICOLON, CRUNCH, CO, CC;
+terminal PRINT, IF, STATE, THEN, ELSE, START, SEPARATOR;
+terminal HOUR_TOKEN, CODE_TOKEN, IP_TOKEN, TRUE, FALSE;
+terminal Integer NUM;
+terminal String ID;
+
+// Non terminal tokens
+non terminal transition_list, state, state_list, header_section, file;
+non terminal S, A, B, C, D, E, h, c, i;
+non terminal Integer num_expr;
+non terminal Boolean bool_expr;
+non terminal String command, command_list, start_state, marker0;
+non terminal HashMap declaration_list;
+
+precedence left OR;
+precedence left AND;
+//precedence right NOT;
+//precedence left PLUS, MINUS;
+//precedence left STAR, DIV;
+
+//GRAMMAR START
+start with file;
+
+file ::= header_section  SEPARATOR state_list SEPARATOR transition_list
+;
+
+/* header section */
+
+header_section ::= S ;
+
+S ::= h A | i A | c B ;
+A ::= h A | i A | c C | c ;
+B ::= c D | h C | i C | h | i ;
+C ::= h C | i C | h | i ;
+D ::= c E | c ;
+E ::= c E | c ;
+
+h ::= HOUR_TOKEN SEMICOLON ;
+c ::= CODE_TOKEN SEMICOLON ;
+i ::= IP_TOKEN SEMICOLON ;
+
+/* state section */
+
+state_list ::= state state state 
+			 | state_list state state
+;
+
+state ::= STATE ID:state_id CO declaration_list:var_map CC {:
+		parser.map.put(state_id, (HashMap<String, Integer>)var_map);
+	:}
+;
+
+declaration_list ::= ID:var_id EQ NUM:n SEMICOLON {:
+						RESULT = new HashMap<String, Integer>();
+						RESULT.put(var_id, n);
+					:}
+					| declaration_list:var_map ID:var_id EQ NUM:n SEMICOLON {:
+						((HashMap<String, Integer>)var_map).put(var_id, n);
+						RESULT = var_map;
+					:}
+;
+
+/* transition section */
+
+transition_list ::= start_state command_list
+;
+
+start_state ::= START ID:init_state SEMICOLON {:
+		RESULT = init_state;
+	:}
+;
+
+command_list ::= {: RESULT = (String)parser.stack(0); :} // copy start_state
+				| command_list command:next_state {:
+					RESULT = next_state;
+				:}
+;
+
+command ::= PRINT SEMICOLON {:
+				String curr_state = (String)parser.stack(-2);
+				System.out.println(curr_state);	
+				RESULT = curr_state;
+		  :}
+		  | IF STATE ID:s1 CRUNCH bool_expr:e THEN STATE ID:s2 SEMICOLON {:		  		
+		  		String curr_state = (String)parser.stack(-9);
+		  		if(curr_state.equals(s1)){
+		  			if(e) RESULT = s2;
+		  			else RESULT = curr_state;
+		  		}
+		  		else RESULT = curr_state;
+		  :}
+	  	  | IF STATE ID:s1 CRUNCH bool_expr:e THEN STATE ID:s2 SEMICOLON ELSE STATE ID:s3 SEMICOLON {:
+	  	  		String curr_state = (String)parser.stack(-13);
+		  		if(curr_state.equals(s1)){
+		  			if(e ) RESULT = s2;
+		  			else RESULT = s3;
+		  		}
+		  		else RESULT = curr_state;
+	  	  :}
+;
+
+bool_expr ::= bool_expr:e1 AND bool_expr:e2 {:
+				RESULT = (e1 && e2);
+			:}
+			| bool_expr:e1 OR bool_expr:e2 {:
+				RESULT = (e1 || e2);
+			:}
+			| num_expr:e1 EQEQ num_expr:e2 {:
+				RESULT = e1.equals(e2);
+			:}
+			| TRUE {:
+				RESULT = true;
+			:}
+			| FALSE {:
+				RESULT = false;
+			:}
+;
+
+num_expr ::= NUM:n {:
+				RESULT = n;
+		   :}
+		   | ID:state_id DOT ID:var_id {:
+		   		HashMap<String, Integer> var_map = parser.map.get(state_id);
+		   		RESULT = var_map.get(var_id);
+		   :}
+;

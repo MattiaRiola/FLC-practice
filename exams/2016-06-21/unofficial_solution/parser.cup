@@ -1,0 +1,147 @@
+import java.io.*;
+import java_cup.runtime.*;
+import java.util.HashMap;
+
+init with {:
+    symbol_table = new HashMap<String, HashMap<String, Integer>>();
+:};
+
+parser code {:
+    public HashMap<String, HashMap<String, Integer>> symbol_table;
+
+    public static void main(String argv[]){
+	try {
+        /* Scanner instantiation */
+        scanner l = new scanner(new FileReader(argv[0]));
+        /* Parser instantiation */
+        parser p = new parser(l);
+        /* Run the parser */
+        Object result = p.parse().value;      
+      } catch (NullPointerException e) {
+        e.printStackTrace();
+              System.err.println("Syntax error");
+      } catch (FileNotFoundException e){
+              System.err.println("Errore opening file " + argv[0]);
+      } catch (Exception e){
+              e.printStackTrace();
+      }
+    }
+  
+    // Redefinition of error functions
+    public void report_error(String message, Object info) {
+        System.err.print("ERROR: Syntax error");
+        if (info instanceof Symbol) {
+            if (((Symbol)info).left != -1) {
+                int line = (((Symbol)info).left) + 1;
+                int column = (((Symbol)info).right) + 1;
+                System.err.print(" (row " + line + ", column " + column + "): " + message);
+            } else System.err.print(": " + message);
+        }
+        else System.err.print(": " + message);
+    }
+    public void syntax_error(Symbol cur_token) { }
+
+    // Return actual symbol
+    /* It returns the object of type Symbol in the top of the parser stack.
+    */
+    public Symbol getToken() {
+        return ((Symbol)stack.elementAt(tos));
+    }
+    
+    // Return semantic value of symbol in position (position)
+    public Object stack(int position) {
+        return (((Symbol)stack.elementAt(tos + position)).value);
+    }
+:};
+
+// Terminal tokens
+terminal SEP;
+terminal T1, T2, T3;
+terminal RO, RC, SO, SC, S, CM, EQ, PT;
+terminal PLUS, MINUS;
+terminal INIT, DEFAULT, WHEN, DO, DONE;
+terminal AND, OR, NOT;
+terminal PRINT, CASE, NEXT;
+terminal String STATE, ATTR, INT, QUOTED;
+
+// Non Terminal tokens
+non terminal file;
+non terminal header, h1, h2, t1, t2, t3;
+non terminal states, ostate, state;
+non terminal HashMap attributes, attribute;
+non terminal transitions, initial;
+non terminal Integer int;
+non terminal String[] ini, default;
+non terminal whens, when;
+non terminal Boolean bool;
+non terminal Integer comparable;
+non terminal command, commands, print, case;
+
+// Precedences and associativities
+// lower precedences
+precedence left OR;
+precedence left AND;
+precedence left NOT;
+// higher precedences
+
+//////////////////////////////////////
+// Grammar start
+//////////////////////////////////////
+
+start with file;
+
+file ::= header SEP states SEP transitions;
+
+header ::= h1 | h2;
+h1 ::= T2 S T2 S t2 T1 S t1 t3;
+t2 ::= | T2 S t2;
+t1 ::= | T1 S T1 S t1;
+t3 ::= T3 S T3 S | T3 S T3 S T3 S T3 S;
+
+h2 ::= T2 S T3 S T3 S T3 S | T3 S T2 S T3 S T3 S | T3 S T3 S T2 S T3 S | T3 S T3 S T3 S T2 S;
+
+int ::= INT:a {: RESULT = Integer.parseInt(a); :} |
+        PLUS INT:a {: RESULT = Integer.parseInt(a); :} |
+        MINUS INT:a {: RESULT = Integer.parseInt("-" + a); :} |;
+
+states ::= state state state ostate;
+ostate ::= | state state ostate;
+
+state ::= STATE:a EQ SO attributes:b SC S {: parser.symbol_table.put(a, b); :};
+attributes ::= attribute:a CM attributes:b {: RESULT = a; a.putAll(b); :} |
+               attribute:a {: RESULT = a; :};
+attribute ::= ATTR:a EQ int:b {: RESULT = new HashMap<String, Integer>(); RESULT.put(a, b); :};
+
+transitions ::= initial whens;
+initial ::= ini:a {: RESULT = a; :} | default:a {: RESULT = a; :};
+ini ::= INIT STATE:a S {: RESULT = new String[] { a }; :};
+default ::= DEFAULT S {: RESULT = new String[] { "S0" }; :};
+
+whens ::= whens {: RESULT = parser.stack(-1); :} when | when;
+when ::= WHEN bool:a DO {: RESULT = 0; :} commands DONE S;
+
+bool ::= bool:a AND bool:b {: RESULT = a && b; :} |
+         bool:a OR bool:b {: RESULT = a || b; :} |
+         NOT bool:a {: RESULT = !a; :} |
+         RO bool:a RC {: RESULT = a; :} |
+         comparable:a EQ EQ comparable:b {: RESULT = a.intValue() == b.intValue(); :};
+comparable ::= STATE:a PT ATTR:b {: RESULT = parser.symbol_table.get(a).get(b); :} | int:a {: RESULT = a; :};
+
+commands ::= commands {: RESULT = -2; :} command | command;
+command ::= print | case;
+print ::= PRINT QUOTED:a S {:
+            Integer off = (Integer)parser.stack(-3);
+            Boolean exec = (Boolean)parser.stack(off.intValue()-5);
+            if (exec.booleanValue()) {
+              System.out.println(a);
+            }
+          :};
+case ::= CASE STATE:a NEXT STATE:b S {:
+           Integer off = (Integer)parser.stack(-5);
+           Boolean exec = (Boolean)parser.stack(off.intValue()-7);
+           String currState = ((String[])parser.stack(off.intValue()-9))[0];
+           if (exec.booleanValue() && currState.equals(a)) {
+             ((String[])parser.stack(off.intValue()-9))[0] = b;
+             System.out.println(b);
+           }
+         :};
