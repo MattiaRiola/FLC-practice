@@ -34,8 +34,8 @@ rundebug: compiledebug
 
 
 compile_scanner_only: scanner
+	echo "Substitute manually the %cup with %standalone configuration in jflex file"
 	javac Yylex.java
 
 scanner_only: compile_scanner_only
-	echo "Add manually the %standalone configuration in jflex file"
 	java Yylex test.txt
