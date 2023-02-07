@@ -7,8 +7,15 @@ import java.util.*;
 import java.io.*;
 
 
+init with {:
+    symbol_table = new Hashtable<String,Integer>();
+:};
+
 parser code 	{:
-    
+    Integer totale=0;
+    public static Hashtable<String,Integer> symbol_table;
+
+
     public void report_error(String message, Object info) {
         StringBuffer m = new StringBuffer(message);
         if (info instanceof Symbol) {
@@ -34,15 +41,67 @@ parser code 	{:
 ///// SYMBOLS DECLARATION
 /////////////////////////////////
 
-terminal ...;
+terminal KEY1, KEY2, DD, KBS, S, C, DATE, TIME,  DATAK, TIMEK ;
+terminal Integer INT ;
+terminal String IP, FILENAME ;
 
-non terminal ...;
-
+non terminal prog, SECTION1, SECTION2, DETAIL, SONGINFOL;
+non terminal SERVERL, SERVERLNE, SERVERINFO;
+non terminal Integer SONGL;
 
 
 //////////////////////////////////
 ///// GRAMMAR
 /////////////////////////////////
 
-start with ...;
+start with prog;
 
+prog ::= KEY1 DD SECTION1 KEY2 DD SECTION2 
+    {:
+        System.out.println("Syntax is correct! GJ");
+        System.out.println(symbol_table);
+
+    :}
+;
+
+SECTION1 ::= DETAIL 
+    | SECTION1 DETAIL ;
+
+DETAIL ::= INT KBS DD SONGINFOL S
+;
+
+SONGINFOL ::= FILENAME:x INT:y 
+                {:  Integer rate = (Integer) parser.stack(-4);
+                    symbol_table.put(x,y*rate);
+                :} 
+        | SONGINFOL C {: RESULT = (Integer) parser.stack(-4); :} FILENAME:x INT:y 
+                {:  Integer rate = (Integer) parser.stack(-2);
+                    symbol_table.put(x,y*rate);
+                :} 
+;
+
+SECTION2 ::= DATAK DD DATE TIMEK DD TIME SERVERL 
+            | TIMEK DD TIME DATAK DD DATE SERVERL
+;
+SERVERL ::= | SERVERLNE
+;
+
+SERVERLNE ::= SERVERINFO SERVERINFO SERVERINFO SERVERINFO SERVERINFO
+            | SERVERLNE SERVERINFO SERVERINFO
+;
+
+SERVERINFO ::= IP:x {: System.out.println(x); :} DD SONGL:y S {: System.out.println("TOTAL: " + y); :}
+;
+SONGL ::= FILENAME:x 
+        {: 
+            Integer weight = symbol_table.get(x);
+            System.out.println(x + " " + weight);
+            RESULT = weight;
+        :}
+        | SONGL:y C FILENAME:x 
+        {:
+            Integer weight = symbol_table.get(x);
+            System.out.println(x + " " + weight);
+            RESULT = y + weight;
+        :}
+;
