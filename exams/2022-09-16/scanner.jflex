@@ -69,13 +69,14 @@ tok3 = "Z_"{date}(":"{time})?
 
 string = \" ~ \"
 //"
-
 double = (([0-9]+\.[0-9]*) | ([0-9]*\.[0-9]+))
+integer = ([1-9][0-9]*|0)
 %%
 
 
 
 ";"				{return symAndPrint( "S",sym.S);}
+":"				{return symAndPrint( "DD",sym.DD);}
 ","				{return symAndPrint( "C",sym.C);}
 
 {tok1}			{return symAndPrint(" TOK1",sym.TOK1);}
@@ -85,12 +86,16 @@ double = (([0-9]+\.[0-9]*) | ([0-9]*\.[0-9]+))
 "===="			{return symAndPrint(" SEP",sym.SEP);}
 "km"			{return symAndPrint(" KM",sym.KM);}
 "TO"			{return symAndPrint(" TO",sym.TO);}
+"m"				{return symAndPrint(" M",sym.M);}
+"kcal/km"		{return symAndPrint(" KCAL",sym.KCAL);}
 
 {string}		{return symAndPrint(" STRING",sym.STRING, new String(yytext()));}
 
-{double}			{return symAndPrint(" DOUBLE",sym.DOUBLE,new Double(yytext()));}
-
-"(+-" ~ "-+)"     {if(visualization) System.out.println(yytext());}
+{double}		{return symAndPrint(" DOUBLE",sym.DOUBLE,new Double(yytext()));}
+{integer}		{return symAndPrint(" INTEGER",sym.INTEGER,new Integer(yytext()));}
+"ELEVATION"		{return symAndPrint(" ELEVATIONKW",sym.ELEVATIONKW);}
+"ROUTE"			{return symAndPrint(" ROUTEKW",sym.ROUTEKW);}
+"(+-" ~ "-+)"   {if(visualization) System.out.println(yytext());}
 
 \r | \n | \r\n | " " | \t	{if(visualization) System.out.print(yytext());}
 

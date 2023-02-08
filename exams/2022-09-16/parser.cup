@@ -39,7 +39,8 @@ parser code 	{:
 ///// SYMBOLS DECLARATION
 /////////////////////////////////
 
-terminal S, C, TO,KM, SEP; 
+terminal S, C, TO,KM,M,KCAL,DD, SEP; 
+terminal ELEVATIONKW, ROUTEKW; 
 terminal TOK1,TOK2,TOK3;
 
 non terminal prog ;
@@ -48,12 +49,16 @@ non terminal TOKL, TOK12EL, TOK12L;
 
 terminal String STRING;
 terminal Double DOUBLE;
+terminal Integer INTEGER;
 non terminal DEST, DESTL;
 non terminal DISTANCE, DISTANCEL;
 
 
+non terminal COMMANDL, COMMAND;
+non terminal ROUTE, ELEVATION;
+non terminal PLACEL, PLACE;
+non terminal ROUTEL, PAIRL, PAIR;
 
-non terminal ROUTEL;
 
 //////////////////////////////////
 ///// GRAMMAR
@@ -61,7 +66,7 @@ non terminal ROUTEL;
 
 start with prog;
 
-prog ::= HEADER SEP DISTANCEL SEP ROUTEL
+prog ::= HEADER SEP DISTANCEL SEP COMMANDL {:System.out.println("syntax correct, GJ!");:}
 ;
 HEADER ::= TOKL
 ;
@@ -90,3 +95,29 @@ DESTL::= DEST
 DEST ::= TO STRING:dest DOUBLE:dist KM 
 ;
 
+COMMANDL ::= COMMAND COMMAND COMMAND COMMAND 
+        | COMMANDL COMMAND COMMAND
+;
+
+COMMAND ::= ROUTE 
+        | ELEVATION
+;
+
+ELEVATION ::= ELEVATIONKW PLACEL S
+;
+PLACEL ::= PLACE
+        | PLACEL C PLACE
+;
+
+PLACE ::= STRING INTEGER M
+;
+
+ROUTE ::= ROUTEKW INTEGER KCAL DD PAIRL S
+        | ROUTEKW INTEGER DD PAIRL S
+;
+PAIRL ::= PAIR
+        | PAIRL C PAIR
+;
+
+PAIR ::= STRING STRING DOUBLE
+;
