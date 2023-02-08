@@ -133,25 +133,40 @@ PLACEL ::= STRING INTEGER:x M
             RESULT = x;
         :}
 ;
-
-ROUTE ::= ROUTEKW INTEGER:x KCAL DD PAIRL:sum S
+//                  -1       top                  -2            -1
+ROUTE ::= ROUTEKW INTEGER:x KCAL {:RESULT = parser.stack(-1);:} DD PAIRL:sum S
+{:
+    System.out.println("Tot: "+ sum); 
+:}
+        //           -2     -1   
         | ROUTEKW INTEGER:x DD PAIRL:sum S
 ;
+
+
 PAIRL ::= STRING:src STRING:dest DOUBLE:mod
 {:
     Hashtable<String,Double> innerMap = symbol_table.get(src);
     Double dist = innerMap.get(dest);
-    System.out.println("stack(-4): "+parser.stack(-4));
-    //Integer kcal = (Integer) parser.stack(-4);
-    RESULT = dist*mod; 
+    //System.out.println("\nstack(-4): "+parser.stack(-4));
+    Integer kcal = (Integer) parser.stack(-4);
+    Double kcalSpent = dist*mod*kcal;
+    System.out.println(src + " " + dest + kcalSpent);
+//    System.out.println(src + " " + dest +" " +dist+"*"+kcal+"*"+mod+"="+kcalSpent+" kcal"); 
+    RESULT = kcalSpent; 
 :}
+        // -4       -3    -2         -1          top
         | PAIRL:sum C STRING:src STRING:dest DOUBLE:mod
 {:
+    //System.out.println("\nPAIR: "+src+" - "+dest );
+    //System.out.println("sym_table: "+ symbol_table);
     Hashtable<String,Double> innerMap = symbol_table.get(src);
+    //System.out.println("inner_map: "+ innerMap);
     Double dist = innerMap.get(dest);
-    System.out.println("stack(-7): "+parser.stack(-7));
-    //Integer kcal = (Integer) parser.stack(-7);
-    
-    RESULT = dist*mod;
+    //System.out.println("\nstack(-6): "+parser.stack(-6));
+    Integer kcal = (Integer) parser.stack(-6);
+    Double kcalSpent = dist*mod*kcal;
+    System.out.println(src + " " + dest + kcalSpent);
+//    System.out.println(src + " " + dest +" " +dist+"*"+kcal+"*"+mod+"="+kcalSpent+" kcal"); 
+    RESULT = sum + kcalSpent; 
 :}
 ;
