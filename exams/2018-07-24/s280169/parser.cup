@@ -6,6 +6,9 @@ import java_cup.runtime.*;
 import java.util.*;
 import java.io.*;
 
+init with {:
+    symbol_table = new HashMap<String, HashMap<String, Double>>();
+:};
 
 parser code 	{:
     public HashMap<String, HashMap<String, Double>> symbol_table;
@@ -35,15 +38,91 @@ parser code 	{:
 ///// SYMBOLS DECLARATION
 /////////////////////////////////
 
-terminal ...;
+terminal SEP, TOKEN1, TOKEN2, TOKEN3, S, C,DD, TO; 
+terminal String STRING;
+terminal KM, COMPUTEKEYW, ARROW;
+terminal TIMEKEYW, EXPENSEKEYW, EXTRA, PERCENT, KMH;
+terminal EUROKM, MINUS, DISC, EURO;
 
-non terminal ...;
+terminal Double DOUBLE,DOUBLE2;
+terminal Integer INT;
 
+non terminal prog, SECTION1, SECTION2;
+non terminal TOKEN3EL, TOKEN3L;
+
+non terminal DISTANCE, DISTANCEL;
+non terminal HashMap<String, Double> DESTL;
+non terminal COMPUTE, COMPUTEEL, COMPUTEL;
+non terminal TIMEL, TIME;
+non terminal EXPENSEL, EXPENSE;
 
 
 //////////////////////////////////
 ///// GRAMMAR
 /////////////////////////////////
 
-start with ...;
+start with prog
+;
 
+prog ::= SECTION1 SEP SECTION2 {: System.out.println("\nSyntax is correct, GJ!");:}
+;
+
+SECTION1 ::=  TOKEN3EL TOKEN1 S TOKEN3EL TOKEN1 S TOKEN3EL TOKEN2 S TOKEN3EL 
+            | TOKEN3EL TOKEN1 S TOKEN3EL TOKEN2 S TOKEN3EL TOKEN1 S TOKEN3EL
+            | TOKEN3EL TOKEN2 S TOKEN3EL TOKEN1 S TOKEN3EL TOKEN1 S TOKEN3EL
+;
+TOKEN3EL ::= | TOKEN3L 
+;
+TOKEN3L ::= TOKEN3 S
+          | TOKEN3L TOKEN3 S
+;
+
+SECTION2 ::= DISTANCEL COMPUTEEL
+;
+DISTANCEL ::= DISTANCE DISTANCE DISTANCE  
+            | DISTANCEL DISTANCE DISTANCE
+;
+COMPUTEEL ::= | COMPUTEL
+;
+COMPUTEL ::= COMPUTEL COMPUTE COMPUTE 
+           | COMPUTE
+;
+DISTANCE ::=  STRING:x ARROW DESTL:innerMap S 
+{:
+    System.out.println("\ninner map for " + x +" : " + innerMap);
+    symbol_table.put(x,innerMap);
+:}
+;
+DESTL ::= STRING:x DOUBLE:y KM 
+{:
+    HashMap<String,Double> innerMap = new HashMap();
+    innerMap.put(x,y);
+    RESULT = innerMap;
+:} 
+        | DESTL:map C STRING:x DOUBLE:y KM 
+{:
+    map.put(x,y);
+    RESULT = map;
+:}
+;
+
+COMPUTE ::=   COMPUTEKEYW STRING TO STRING TIMEKEYW DD TIMEL S
+            | COMPUTEKEYW STRING TO STRING EXPENSEKEYW DD EXPENSEL S
+            | COMPUTEKEYW STRING TO STRING EXPENSEKEYW EXTRA DOUBLE DD EXPENSEL S
+;
+
+TIMEL ::= TIME 
+        | TIMEL C TIME
+;
+
+TIME ::= INT PERCENT INT KMH
+;
+
+EXPENSEL ::=  EXPENSE
+            | EXPENSEL C EXPENSE
+;
+
+EXPENSE ::= STRING DOUBLE EUROKM 
+            | STRING DISC DOUBLE EURO MINUS DOUBLE EUROKM
+            | STRING DOUBLE EUROKM MINUS DISC DOUBLE EURO
+;

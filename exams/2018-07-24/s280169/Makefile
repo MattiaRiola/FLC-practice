@@ -15,6 +15,7 @@ scanner: clean
 parser: scanner
 	java java_cup.Main -parser parser parser.cup
 	
+	
 compile: parser
 	javac *.java
 	

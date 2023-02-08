@@ -11,7 +11,7 @@ $$01101; /- token3 -/
 
 "Milano" -> "Torino" 150.0 km,
             "Genova" 150.2 km,
-            "Venezia" 269.0 km;
+            "Venezia" 269.0 ;
 
 "Roma" ->   "Napoli" 226.0 km,
             "Bari" 431.0 km,
