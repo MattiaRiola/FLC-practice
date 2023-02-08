@@ -1,3 +1,4 @@
+(+- division between header and distance sections -+)
 X_110*1011000+111*;                                (+- tok1 -+)
 Y_xxxyyy$xyzxyzxyzx#xxxyyy$xxxyyy$xxxyyy ;         (+- tok2 -+)
 Z_2023/01/01 ;                                     (+- tok3 -+)

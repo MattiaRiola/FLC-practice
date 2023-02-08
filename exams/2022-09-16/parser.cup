@@ -6,9 +6,13 @@ import java_cup.runtime.*;
 import java.util.*;
 import java.io.*;
 
+init with {:
+    symbol_table = new Hashtable<String,Double>();
+:};
 
 parser code 	{:
-    
+    public static Hashtable<String,Double> symbol_table;
+
     public void report_error(String message, Object info) {
         StringBuffer m = new StringBuffer(message);
         if (info instanceof Symbol) {
@@ -35,13 +39,17 @@ parser code 	{:
 ///// SYMBOLS DECLARATION
 /////////////////////////////////
 
-terminal S, SEP;
-terminal String ID;
-terminal Integer INT;
+terminal S, C, TO,KM, SEP; 
+terminal TOK1,TOK2,TOK3;
 
 non terminal prog ;
-non terminal String IDL ; 
+non terminal HEADER ;
+non terminal TOKL, TOK12EL, TOK12L;
 
+terminal String STRING;
+terminal Double DOUBLE;
+non terminal POSL, POS;
+non terminal DISTANCE, DISTANCEL;
 
 //////////////////////////////////
 ///// GRAMMAR
@@ -49,8 +57,32 @@ non terminal String IDL ;
 
 start with prog;
 
-prog ::= IDL:x S {: System.out.println("\nSyntax is correct"); System.out.println("RESULT: "+x); :}
+prog ::= HEADER SEP
+;
+HEADER ::= TOKL
+;
+TOKL ::= TOK12EL 
+        | TOK12EL TOK3 S TOK12EL
+        | TOK12EL TOK3 S TOK12EL TOK3 S TOK12EL TOK3 S TOK12EL TOK3 S TOK12EL
+;
+TOK12EL ::= | TOK12L
+;
+TOK12L ::= TOK1 S
+        |  TOK2 S
+        |  TOK12L TOK1 S
+        |  TOK12L TOK2 S
 ;
 
-IDL ::= ID:x {: RESULT = x; :} | IDL:y ID:x {: RESULT = y + "_" + x; :}
+DISTANCEL ::= DISTANCEL DISTANCE 
+| DISTANCE
+;
+DISTANCE ::= STRING POSL S
+;
+
+POSL::=     POS 
+        |   POSL C POS 
+;
+
+POS ::= TO STRING:dest DOUBLE:dist KM 
+
 ;
