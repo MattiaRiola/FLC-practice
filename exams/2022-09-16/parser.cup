@@ -150,7 +150,7 @@ PAIRL ::= STRING:src STRING:dest DOUBLE:mod
     //System.out.println("\nstack(-4): "+parser.stack(-4));
     Integer kcal = (Integer) parser.stack(-4);
     Double kcalSpent = dist*mod*kcal;
-    System.out.println(src + " " + dest + kcalSpent);
+    System.out.println(src + " " + dest + String.format("%.2f",kcalSpent));
 //    System.out.println(src + " " + dest +" " +dist+"*"+kcal+"*"+mod+"="+kcalSpent+" kcal"); 
     RESULT = kcalSpent; 
 :}
@@ -165,7 +165,7 @@ PAIRL ::= STRING:src STRING:dest DOUBLE:mod
     //System.out.println("\nstack(-6): "+parser.stack(-6));
     Integer kcal = (Integer) parser.stack(-6);
     Double kcalSpent = dist*mod*kcal;
-    System.out.println(src + " " + dest + kcalSpent);
+    System.out.println(src + " " + dest + String.format("%.2f",kcalSpent));
 //    System.out.println(src + " " + dest +" " +dist+"*"+kcal+"*"+mod+"="+kcalSpent+" kcal"); 
     RESULT = sum + kcalSpent; 
 :}
