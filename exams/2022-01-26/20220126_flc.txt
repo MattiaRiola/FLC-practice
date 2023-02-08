@@ -1,0 +1,22 @@
+{{{ Header section: first type of header }}}
+A_-22*12*14*20*100*328*200 ;   {{{ tok1 }}}
+B_cccc;                        {{{ tok2 }}}
+
+*** {{{ division between header and components sections }}}
+{{{ Components section }}}
+
+{{{ AVG (150.00+50.00+70.00)/3=90.00 }}}
+"electronic" -> [ 150.00 euro "CPU" - 50.00 euro "RAM 4GB" - 70.00 euro "SSD 512MB" ];
+
+{{{ AVG (12.00+5.00)/2=8.50 }}}
+"peripherals" -> [ 12.00 euro "Wi-Fi adapter" - 5.00 euro "Ethernet" ] ;
+
+{{{ AVG (40.00+200.00)/2=120.00 }}}
+"others" -> [ 40.00 euro "Power supply" - 200.00 euro "Motherboard" ];
+
+***** {{{ division between components and PC sections }}}
+{{{ PC section }}}
+"PC" 10 : "electronic" [ 2 "SSD 512MB" - 1 "CPU" - 2 "RAM 4GB" ],
+          "peripherals" [ 1 "Wi-Fi adapter" ],
+          "others" [ 1 "Motherboard" - 2 "Power supply" ];
+"PC part" 2 :  "electronic" [ 4 "CPU" - 2 "RAM 4GB" ];
