@@ -76,6 +76,7 @@ double = (([0-9]+\.[0-9]*) | ([0-9]*\.[0-9]+))
 
 
 ";"				{return symAndPrint( "S",sym.S);}
+","				{return symAndPrint( "C",sym.C);}
 
 {tok1}			{return symAndPrint(" TOK1",sym.TOK1);}
 {tok2}			{return symAndPrint(" TOK2",sym.TOK2);}
@@ -88,9 +89,6 @@ double = (([0-9]+\.[0-9]*) | ([0-9]*\.[0-9]+))
 {string}		{return symAndPrint(" STRING",sym.STRING, new String(yytext()));}
 
 {double}			{return symAndPrint(" DOUBLE",sym.DOUBLE,new Double(yytext()));}
-
-
-
 
 "(+-" ~ "-+)"     {if(visualization) System.out.println(yytext());}
 

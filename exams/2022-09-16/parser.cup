@@ -48,8 +48,12 @@ non terminal TOKL, TOK12EL, TOK12L;
 
 terminal String STRING;
 terminal Double DOUBLE;
-non terminal POSL, POS;
+non terminal DEST, DESTL;
 non terminal DISTANCE, DISTANCEL;
+
+
+
+non terminal ROUTEL;
 
 //////////////////////////////////
 ///// GRAMMAR
@@ -57,7 +61,7 @@ non terminal DISTANCE, DISTANCEL;
 
 start with prog;
 
-prog ::= HEADER SEP
+prog ::= HEADER SEP DISTANCEL SEP ROUTEL
 ;
 HEADER ::= TOKL
 ;
@@ -74,15 +78,15 @@ TOK12L ::= TOK1 S
 ;
 
 DISTANCEL ::= DISTANCEL DISTANCE 
-| DISTANCE
+            | DISTANCE
 ;
-DISTANCE ::= STRING POSL S
-;
-
-POSL::=     POS 
-        |   POSL C POS 
+DISTANCE ::= STRING:x DESTL S
 ;
 
-POS ::= TO STRING:dest DOUBLE:dist KM 
-
+DESTL::= DEST 
+        | DESTL C DEST 
 ;
+
+DEST ::= TO STRING:dest DOUBLE:dist KM 
+;
+
