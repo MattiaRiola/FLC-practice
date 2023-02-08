@@ -13,7 +13,7 @@ import java_cup.runtime.*;
 
 %{
 
-	public final boolean visualization = true;
+	public final boolean visualization = false;
 
 	private Symbol symAndPrint(String strType, int type) {
 		if(visualization)

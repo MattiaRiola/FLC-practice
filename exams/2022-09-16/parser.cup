@@ -7,11 +7,12 @@ import java.util.*;
 import java.io.*;
 
 init with {:
-    symbol_table = new Hashtable<String,Double>();
+    symbol_table = new Hashtable<String,Hashtable<String,Double>>();
 :};
 
 parser code 	{:
-    public static Hashtable<String,Double> symbol_table;
+    public static Hashtable<String,Hashtable<String,Double>> symbol_table;
+    public static Integer totalH=0;
 
     public void report_error(String message, Object info) {
         StringBuffer m = new StringBuffer(message);
@@ -50,14 +51,16 @@ non terminal TOKL, TOK12EL, TOK12L;
 terminal String STRING;
 terminal Double DOUBLE;
 terminal Integer INTEGER;
-non terminal DEST, DESTL;
-non terminal DISTANCE, DISTANCEL;
+non terminal DEST;
+non terminal DISTANCE,DISTANCEL;
+non terminal Hashtable<String,Double>  DESTL;
 
 
 non terminal COMMANDL, COMMAND;
 non terminal ROUTE, ELEVATION;
-non terminal PLACEL, PLACE;
-non terminal ROUTEL, PAIRL, PAIR;
+non terminal Integer PLACEL;
+non terminal ROUTEL, PAIR;
+non terminal Double PAIRL;
 
 
 //////////////////////////////////
@@ -85,11 +88,20 @@ TOK12L ::= TOK1 S
 DISTANCEL ::= DISTANCEL DISTANCE 
             | DISTANCE
 ;
-DISTANCE ::= STRING:x DESTL S
+DISTANCE ::= STRING:x DESTL:innerMap S {: symbol_table.put(x,innerMap); :}
 ;
 
-DESTL::= DEST 
-        | DESTL C DEST 
+DESTL::= TO STRING:dest DOUBLE:dist KM  
+{: 
+    Hashtable<String,Double> map = new Hashtable<String,Double>();
+    map.put(dest,dist);
+    RESULT = map;
+:}
+        | DESTL:map C TO STRING:dest DOUBLE:dist KM
+{: 
+    map.put(dest,dist);
+    RESULT = map;
+:}
 ;
 
 DEST ::= TO STRING:dest DOUBLE:dist KM 
@@ -103,21 +115,43 @@ COMMAND ::= ROUTE
         | ELEVATION
 ;
 
-ELEVATION ::= ELEVATIONKW PLACEL S
+ELEVATION ::= ELEVATIONKW PLACEL:x S {: System.out.println("ELEVATION: "+totalH); totalH=0; :}
+{:
+
+:}
 ;
-PLACEL ::= PLACE
-        | PLACEL C PLACE
+PLACEL ::= STRING INTEGER:x M
+        {:
+            RESULT = x;
+        :}
+        | PLACEL:prevH C STRING INTEGER:x M
+        {:
+            Integer diff;
+            //System.out.println("Adding diff: "+x + " - " + prevH);
+            diff=x-prevH;
+            totalH+=diff;
+            RESULT = x;
+        :}
 ;
 
-PLACE ::= STRING INTEGER M
+ROUTE ::= ROUTEKW INTEGER:x KCAL DD PAIRL:sum S
+        | ROUTEKW INTEGER:x DD PAIRL:sum S
 ;
-
-ROUTE ::= ROUTEKW INTEGER KCAL DD PAIRL S
-        | ROUTEKW INTEGER DD PAIRL S
-;
-PAIRL ::= PAIR
-        | PAIRL C PAIR
-;
-
-PAIR ::= STRING STRING DOUBLE
+PAIRL ::= STRING:src STRING:dest DOUBLE:mod
+{:
+    Hashtable<String,Double> innerMap = symbol_table.get(src);
+    Double dist = innerMap.get(dest);
+    System.out.println("stack(-4): "+parser.stack(-4));
+    //Integer kcal = (Integer) parser.stack(-4);
+    RESULT = dist*mod; 
+:}
+        | PAIRL:sum C STRING:src STRING:dest DOUBLE:mod
+{:
+    Hashtable<String,Double> innerMap = symbol_table.get(src);
+    Double dist = innerMap.get(dest);
+    System.out.println("stack(-7): "+parser.stack(-7));
+    //Integer kcal = (Integer) parser.stack(-7);
+    
+    RESULT = dist*mod;
+:}
 ;
