@@ -39,9 +39,27 @@ import java_cup.runtime.*;
 
 nl = \n | \r | \r\n
 
+//example:
+
+id = [_a-zA-Z][_a-zA-Z0-9]*
+
+integer = ([1-9][0-9]*|0)
 
 %%
 
+
+
+";"				{return symAndPrint( "S",sym.S);}
+
+
+
+{integer}		{return symAndPrint(" INT",sym.INT,new Integer(yytext()));}
+
+{id}			{return symAndPrint(" ID",sym.ID, new String(yytext()));}
+
+"##"			{return symAndPrint(" SEP",sym.SEP);}
+
+"/*" ~ "*/"     {if(visualization) System.out.println(yytext());}
 
 \r | \n | \r\n | " " | \t	{if(visualization) System.out.print(yytext());}
 
