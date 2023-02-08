@@ -30,19 +30,27 @@ parser code 	{:
 
 
 
+
 //////////////////////////////////
 ///// SYMBOLS DECLARATION
 /////////////////////////////////
 
-terminal ...;
+terminal S, SEP;
+terminal String ID;
+terminal Integer INT;
 
-non terminal ...;
-
+non terminal prog ;
+non terminal String IDL ; 
 
 
 //////////////////////////////////
 ///// GRAMMAR
 /////////////////////////////////
 
-start with ...;
+start with prog;
 
+prog ::= IDL:x S {: System.out.println("\nSyntax is correct"); System.out.println("RESULT: "+x); :}
+;
+
+IDL ::= ID:x {: RESULT = x; :} | IDL:y ID:x {: RESULT = y + "_" + x; :}
+;
