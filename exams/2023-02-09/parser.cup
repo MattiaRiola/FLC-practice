@@ -1,0 +1,136 @@
+/*************************
+ Parser
+**************************/
+
+import java_cup.runtime.*;
+import java.util.*;
+import java.io.*;
+
+init with {:
+    symbol_table = new Hashtable<String,Hashtable<String,Double>>();
+:};
+
+parser code 	{:
+    public static Hashtable<String,Hashtable<String,Double>> symbol_table;
+
+    
+    public void report_error(String message, Object info) {
+        StringBuffer m = new StringBuffer(message);
+        if (info instanceof Symbol) {
+            if (((Symbol)info).left != 1 && ((Symbol)info).right != 1) {
+                if (((Symbol)info).left != -1 && ((Symbol)info).right != -1) {
+                    int line = (((Symbol)info).left) + 1;
+                    int column = (((Symbol)info).right) + 1;
+                    m.append(" (line " + line + " column " + column + ")");
+                }
+            }
+            System.err.println(m);
+        }
+    }
+    
+    public Object stack(int position) {
+        return (((Symbol)stack.elementAt(tos + position)).value);
+    }
+:};
+
+
+
+//////////////////////////////////
+///// SYMBOLS DECLARATION
+/////////////////////////////////
+
+terminal S, SEP, DD, SO, SC, C, D;
+terminal Double DOUBLE;
+terminal Integer INT;
+terminal String STRING;
+
+non terminal prog ;
+non terminal String IDL ; 
+
+//HEADER
+non terminal HEADER, TOK2L, TOK2EL;
+terminal TOK1,TOK2;
+
+// FOOD SECTION
+non terminal FOODSECTION;
+non terminal FOODCATEL, FOODCATL, FOODCAT;
+non terminal Hashtable<String,Double> FOODL;
+terminal EUROKG;
+
+// RECIPES SECTION
+terminal KG;
+non terminal RECIPESSECTION;
+
+non terminal RECIPESL, RECIPE;
+non terminal Double INGREDIENTL, INGREDIENT;
+
+
+//////////////////////////////////
+///// GRAMMAR
+/////////////////////////////////
+
+start with prog;
+
+prog ::= HEADER SEP FOODSECTION SEP 
+;
+
+
+HEADER ::= TOK2L TOK1 S TOK2L 
+// (it introduces conflict):
+//        | TOK1 S TOK2L TOK2L
+//        | TOK2L TOK2L TOK1 S
+;
+
+TOK2L ::= TOK2 S
+        | TOK2L TOK2 S
+;
+
+FOODSECTION ::= FOODCATEL 
+//{:System.out.println("\n\nsymbol_table:\n\n"+symbol_table);:}
+;
+FOODCATEL ::= //empty 
+            | FOODCATL
+;
+FOODCATL ::= FOODCAT FOODCAT
+            | FOODCATL FOODCAT FOODCAT
+;
+
+FOODCAT ::= STRING:category DD SO FOODL:innerMap SC S
+{:
+    symbol_table.put(category,innerMap);
+:}
+;
+                                       
+FOODL ::= STRING:name DD DOUBLE:pricekg EUROKG
+{:
+    Hashtable<String,Double> innerMap = new Hashtable();
+    innerMap.put(name,pricekg);
+    RESULT = innerMap;
+:}
+        | FOODL:innerMap C STRING:name DD DOUBLE:pricekg EUROKG
+{:
+    innerMap.put(name,pricekg);
+    RESULT = innerMap;
+:}
+;
+//RECIPES RULES:
+
+RECIPESSECTION ::= 
+    | RECIPESL
+;
+RECIPESL ::= RECIPE 
+            | RECIPESL RECIPE
+;
+RECIPE  ::= INT:num STRING:rname DD INGREDIENTL S
+        |   INT:num STRING:rname INGREDIENTL S
+;
+INGREDIENTL ::= INGREDIENT:ingPrice
+            | INGREDIENTL:sum C INGREDIENT:ingPrice
+;
+INGREDIENT ::= STRING:cat D STRING:food DOUBLE:qnt KG
+{:
+    Double priceKg = symbol_table.get(cat).get(food);
+    Double priceForThis = priceKg*qnt;
+    RESULT = priceForThis;
+:}
+;
