@@ -6,9 +6,12 @@ import java_cup.runtime.*;
 import java.util.*;
 import java.io.*;
 
+init with {:
+    symbol_table = new Hashtable<String,Boolean>();
+:};
 
 parser code 	{:
-    
+    public static Hashtable<String,Boolean> symbol_table;
     public void report_error(String message, Object info) {
         StringBuffer m = new StringBuffer(message);
         if (info instanceof Symbol) {
@@ -35,21 +38,88 @@ parser code 	{:
 /////////////////////////////////
 
 terminal S, SEP;
-terminal String ID;
+terminal String ID,STRING;
 terminal Integer INT;
+terminal EQ, NOT, OR, AND, RO, RC, IF, FI, DO, DONE, PRINT;
+terminal Boolean TRUE, FALSE;
 
 non terminal prog ;
-non terminal String IDL ; 
+non terminal HEADER, EXECUTION;
+
+//HEADER:
+terminal TOK1, TOK2, TOK3;
+non terminal TOKL;
+non terminal TOKL1 ,TOK2L ,TOK13L ,TOK13 ,TOKL2 ,TOK12EL ,TOK12L ,TOK12;
 
 
+//EXECUTION:
+non terminal Boolean BOOLEANEXP, BOOLVAL;
+non terminal EXECTUION, COMMANDEL, COMMANDL, COMMAND, ASSCMD, IFCMD;
+
+//low priority
+precedence left OR;
+precedence left AND;
+precedence left NOT;
+//high priority
 //////////////////////////////////
 ///// GRAMMAR
 /////////////////////////////////
 
 start with prog;
 
-prog ::= IDL:x S {: System.out.println("\nSyntax is correct"); System.out.println("RESULT: "+x); :}
+prog ::= HEADER SEP EXECUTION
+;
+HEADER ::= TOKL1
+        | TOKL2
 ;
 
-IDL ::= ID:x {: RESULT = x; :} | IDL:y ID:x {: RESULT = y + "_" + x; :}
+TOKL1 ::= TOK2L TOK13L
+;
+TOK2L ::= TOK2 S TOK2 S TOK2 S
+        | TOK2L TOK2 S TOK2 S
+;
+TOK13L ::= TOK13 TOK13
+        |  TOK13 TOK13 TOK13
+        |  TOK13 TOK13 TOK13 TOK13 TOK13 TOK13 TOK13 TOK13 TOK13
+;
+TOK13 ::= TOK1 S | TOK3 S
+;
+
+TOKL2 ::= TOK3 TOK12EL TOK3 TOK12EL TOK3 TOK12EL
+;
+TOK12EL ::= 
+        | TOK12L
+;
+TOK12L  ::= TOK12
+        | TOK12L TOK12
+;
+TOK12   ::= TOK1 S 
+        | TOK2 S
+;
+
+EXECTUION ::= COMMANDEL
+;
+COMMANDEL ::= 
+            | COMMANDL
+;
+
+COMMANDL ::= COMMAND COMMAND COMMAND COMMAND COMMAND
+        |   COMMANDL COMMAND COMMAND
+;
+
+
+BOOLEANEXP ::= BOOLVAL:x {:RESULT = x;:}
+//            | BOOLEANEXP:x OR BOOLEANEXP:y {:RESULT = x || y;:}
+//            | BOOLEANEXP:x AND BOOLEANEXP:y {:RESULT = x && y;:}
+//            | NOT BOOLEANEXP:x {:RESULT = !(x);:}
+;
+
+BOOLVAL ::= TRUE:x {:RESULT = x;:} 
+        | FALSE:x {:RESULT = x;:}
+;
+
+COMMAND ::= ID:varName EQ BOOLEANEXP:value S
+{:
+    symbol_table.put(varName,value);
+:}
 ;
