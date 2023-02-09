@@ -8,18 +8,11 @@ import java.io.*;
 
 init with {:
     symbol_table = new Hashtable<String,Hashtable<String,Double>>();
-    maxPrice = Double.MIN_VALUE;
-    minPrice = Double.MAX_VALUE;
-    minFood = "";
-    maxFood = "";
 :};
 
 parser code 	{:
     public static Hashtable<String,Hashtable<String,Double>> symbol_table;
-    public Double minPrice;
-    public Double maxPrice;
-    public String minFood;
-    public String maxFood;
+
     
     public void report_error(String message, Object info) {
         StringBuffer m = new StringBuffer(message);
@@ -97,6 +90,27 @@ TOK2L ::= TOK2 S
 
 FOODSECTION ::= FOODCATEL 
 {:
+    Double minPrice = Double.MAX_VALUE;
+    Double maxPrice = Double.MIN_VALUE;
+    String minFood = "";
+    String maxFood = "";
+
+    //search for the min and max price
+    for (String cat : symbol_table.keySet()) {
+        for (String food : symbol_table.get(cat).keySet()) {
+            Double price = symbol_table.get(cat).get(food);
+            if(price < minPrice){
+                minPrice = price;
+                minFood = food;
+            }
+            if(price > maxPrice){
+                maxPrice = price;
+                maxFood = food;
+            }
+        }
+    }
+
+
     if(minFood.compareTo("") != 0) //handle the case of empty list or no name food 
         System.out.println("Less expensive: "+minFood+" "+String.format("%.2f",minPrice)+" EURO/kg");
     
@@ -122,28 +136,12 @@ FOODCAT ::= STRING:category DD SO FOODL:innerMap SC S
 FOODL ::= STRING:name DD DOUBLE:pricekg EUROKG
 {:
     Hashtable<String,Double> innerMap = new Hashtable();
-    innerMap.put(name,pricekg);
-    if(minPrice > pricekg){
-        minPrice = pricekg;
-        minFood = name;
-    }
-    if(maxPrice < pricekg){
-        maxPrice = pricekg;
-        maxFood = name;
-    } 
+    innerMap.put(name,pricekg); 
     RESULT = innerMap;
 :}
         | FOODL:innerMap C STRING:name DD DOUBLE:pricekg EUROKG
 {:
     innerMap.put(name,pricekg);
-    if(minPrice > pricekg){
-        minPrice = pricekg;
-        minFood = name;
-    }
-    if(maxPrice < pricekg){
-        maxPrice = pricekg;
-        maxFood = name;
-    }
     RESULT = innerMap;
 :}
 ;
